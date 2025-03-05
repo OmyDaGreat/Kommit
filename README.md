@@ -18,15 +18,15 @@ A simple command-line tool written in Kotlin that helps generate conventional co
 
 ## Usage
 
-1. Place the `kommit.yml` file in your project root or specify a custom path
+1. Place the `.kommit.yaml` file in your project root or specify a custom path
 2. Run the script:
 
 ```bash
-# Using default config path (kommit.yml)
+# Using default config path (.kommit.yaml)
 kotlin CommitGenerator.kt
 
 # Using a custom config path
-kotlin CommitGenerator.kt path/to/your/config.yml
+kotlin CommitGenerator.kt path/to/your/config.yaml
 ```
 
 3. Follow the prompts to generate your commit message
@@ -79,11 +79,3 @@ BREAKING CHANGE: Changes the API for button styling
 
 ISSUES CLOSED: #123, #456
 ```
-
-## Created By
-
-OmyDaGreat
-
-## Date
-
-2025-03-05

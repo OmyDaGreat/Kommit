@@ -306,7 +306,7 @@ class CommitGenerator(private val configPath: String) {
 }
 
 fun main(args: Array<String>) {
-    val configPath = if (args.isNotEmpty()) args[0] else "kommit.yml"
+    val configPath = if (args.isNotEmpty()) args[0] else ".kommit.yaml"
     try {
         val generator = CommitGenerator(configPath)
         generator.generateCommit()

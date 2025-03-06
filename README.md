@@ -16,20 +16,32 @@ A simple command-line tool written in Kotlin that helps generate conventional co
 - JDK 8+
 - Git
 
-## Usage
+## Installation
 
-1. Place the `.kommit.yaml` file in your project root or specify a custom path
-2. Run the script:
+### Using Scoop (Windows)
 
-```bash
-# Using default config path (.kommit.yaml)
-kotlin CommitGenerator.kt
+1. Add the Malefic bucket to Scoop:
 
-# Using a custom config path
-kotlin CommitGenerator.kt path/to/your/config.yaml
+```sh
+scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
 ```
 
-3. Follow the prompts to generate your commit message
+2. Install Kommit:
+
+```sh
+scoop install kommit
+```
+
+## Usage
+
+1. Place the `.kommit.yaml` file in your project root or specify a custom path.
+2. Run the script:
+
+```sh
+kommit
+```
+
+3. Follow the prompts to generate your commit message.
 
 ## Configuration File Format
 

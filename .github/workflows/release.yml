@@ -98,6 +98,13 @@ jobs:
           echo '@echo off' > kommit-${{ steps.version.outputs.version }}/kommit.bat
           echo 'java -jar "%~dp0\kommit.jar" %*' >> kommit-${{ steps.version.outputs.version }}/kommit.bat
 
+      - name: Verify kommit.bat File Exists
+        run: |
+          if [ ! -f kommit-${{ steps.version.outputs.version }}/kommit.bat ]; then
+            echo "kommit.bat file not found!"
+            exit 1
+          fi
+  
       - name: Create ZIP Archive
         run: |
           zip -r kommit-${{ steps.version.outputs.version }}.zip kommit-${{ steps.version.outputs.version }}/

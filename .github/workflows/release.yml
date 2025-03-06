@@ -1,0 +1,172 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - '.github/**/*.md'
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Kotlin
+        uses: fwilhe2/setup-kotlin@v1
+        with:
+          version: '1.7.10'
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Determine Version
+        id: version
+        run: |
+          # Get the latest tag or default to 0.1.0 if no tags exist
+          git fetch --tags
+          latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
+          
+          if [ -z "$latest_tag" ]; then
+            latest_version="0.1.0"
+          else
+            latest_version="${latest_tag#v}"
+          fi
+          
+          # Split version into major, minor, patch
+          IFS='.' read -r major minor patch <<< "$latest_version"
+          
+          # Bump version based on input or default to patch
+          bump_type="${{ github.event.inputs.version_bump || 'patch' }}"
+          
+          if [ "$bump_type" == "major" ]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
+          elif [ "$bump_type" == "minor" ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            patch=$((patch + 1))
+          fi
+          
+          new_version="$major.$minor.$patch"
+          echo "New version: $new_version"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "tag=v$new_version" >> $GITHUB_OUTPUT
+
+      - name: Compile Kotlin Application
+        run: |
+          mkdir -p build
+          kotlinc CommitGenerator.kt -include-runtime -d build/kommit.jar
+
+      - name: Create Package Directory
+        run: |
+          mkdir -p kommit-${{ steps.version.outputs.version }}
+          cp build/kommit.jar kommit-${{ steps.version.outputs.version }}/
+          cp LICENSE kommit-${{ steps.version.outputs.version }}/ || echo "LICENSE file not found"
+          cp README.md kommit-${{ steps.version.outputs.version }}/ || echo "README.md file not found"
+          cp kommit.yml kommit-${{ steps.version.outputs.version }}/ || echo "kommit.yml file not found"
+          
+          # Create batch file
+          echo '@echo off' > kommit-${{ steps.version.outputs.version }}/kommit.bat
+          echo 'java -jar "%~dp0\kommit.jar" %*' >> kommit-${{ steps.version.outputs.version }}/kommit.bat
+
+      - name: Create ZIP Archive
+        run: |
+          zip -r kommit-${{ steps.version.outputs.version }}.zip kommit-${{ steps.version.outputs.version }}/
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          checksum=$(sha256sum kommit-${{ steps.version.outputs.version }}.zip | awk '{print $1}')
+          echo "sha256=$checksum" >> $GITHUB_OUTPUT
+
+      - name: Create Scoop Manifest
+        run: |
+          cat > kommit.json << EOF
+          {
+              "version": "${{ steps.version.outputs.version }}",
+              "description": "A Kotlin-based conventional commit message generator",
+              "homepage": "https://github.com/OmyDaGreat/Kommit",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-${{ steps.version.outputs.version }}.zip",
+                      "hash": "${{ steps.sha.outputs.sha256 }}"
+                  }
+              },
+              "bin": "kommit.bat",
+              "persist": "kommit.yml",
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-\$version.zip"
+                      }
+                  }
+              }
+          }
+          EOF
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
+            
+            ### SHA256 Checksum
+            ```
+            ${{ steps.sha.outputs.sha256 }}
+            ```
+            
+            ### Installation via Scoop
+            ```
+            scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
+            scoop install kommit
+            ```
+          draft: false
+          prerelease: false
+          files: |
+            kommit-${{ steps.version.outputs.version }}.zip
+            kommit.json
+
+      - name: Update Scoop Bucket
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.update_bucket != 'false' }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: OmyDaGreat/MaleficBucket
+          event-type: update-kommit
+          client-payload: '{"version": "${{ steps.version.outputs.version }}", "sha256": "${{ steps.sha.outputs.sha256 }}", "tag": "${{ steps.version.outputs.tag }}"}'

@@ -92,7 +92,7 @@ jobs:
           cp build/kommit.jar kommit-${{ steps.version.outputs.version }}/
           cp LICENSE kommit-${{ steps.version.outputs.version }}/ || echo "LICENSE file not found"
           cp README.md kommit-${{ steps.version.outputs.version }}/ || echo "README.md file not found"
-          cp kommit.yml kommit-${{ steps.version.outputs.version }}/ || echo "kommit.yml file not found"
+          cp .kommit.yaml kommit-${{ steps.version.outputs.version }}/ || echo ".kommit.yaml file not found"
           
           # Create batch file
           echo '@echo off' > kommit-${{ steps.version.outputs.version }}/kommit.bat
@@ -130,7 +130,7 @@ jobs:
                   }
               },
               "bin": "kommit.bat",
-              "persist": "kommit.yml",
+              "persist": ".kommit.yaml",
               "checkver": "github",
               "autoupdate": {
                   "architecture": {

@@ -1,5 +1,4 @@
 import java.io.File
-import java.io.InputStream
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -157,55 +156,26 @@ class CommitGenerator(private val configPath: String) {
     
     private fun promptSelection(message: String, options: List<String>): Int {
         println("\n$message:")
-        var currentSelection = 0
-
+        options.forEachIndexed { index, option ->
+            println("${index + 1}. $option")
+        }
+        
+        var selection: Int
         while (true) {
-            options.forEachIndexed { index, option ->
-                if (index == currentSelection) {
-                    println("> $option")
+            print("Enter your choice (1-${options.size}): ")
+            try {
+                selection = scanner.nextLine().toInt() - 1
+                if (selection in 0 until options.size) {
+                    break
                 } else {
-                    println("  $option")
+                    println("Invalid selection. Please try again.")
                 }
-            }
-
-            when (readKey()) {
-                Key.UP -> {
-                    currentSelection = if (currentSelection > 0) currentSelection - 1 else options.size - 1
-                }
-                Key.DOWN -> {
-                    currentSelection = if (currentSelection < options.size - 1) currentSelection + 1 else 0
-                }
-                Key.ENTER -> {
-                    return currentSelection
-                }
-                else -> {} // ignore other keys
-            }
-
-            // Clear the console output
-            repeat(options.size + 1) {
-                print("\u001B[F")
+            } catch (e: NumberFormatException) {
+                println("Please enter a valid number.")
             }
         }
-    }
-
-    private fun readKey(): Key {
-        val input = System.`in`.read()
-        return when (input) {
-            27 -> { // ESC sequence
-                System.`in`.read() // skip [
-                when (System.`in`.read()) {
-                    'A'.toInt() -> Key.UP
-                    'B'.toInt() -> Key.DOWN
-                    else -> Key.UNKNOWN
-                }
-            }
-            10, 13 -> Key.ENTER
-            else -> Key.UNKNOWN
-        }
-    }
-
-    enum class Key {
-        UP, DOWN, ENTER, UNKNOWN
+        
+        return selection
     }
     
     private fun promptForScope(): String {

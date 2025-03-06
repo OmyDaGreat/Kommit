@@ -1,4 +1,5 @@
 import java.io.File
+import java.io.InputStream
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -167,14 +168,14 @@ class CommitGenerator(private val configPath: String) {
                 }
             }
 
-            when (val key = readLine()?.trim()) {
-                "w", "W" -> { // up arrow
+            when (readKey()) {
+                Key.UP -> {
                     currentSelection = if (currentSelection > 0) currentSelection - 1 else options.size - 1
                 }
-                "s", "S" -> { // down arrow
+                Key.DOWN -> {
                     currentSelection = if (currentSelection < options.size - 1) currentSelection + 1 else 0
                 }
-                "" -> { // enter key
+                Key.ENTER -> {
                     return currentSelection
                 }
                 else -> {} // ignore other keys
@@ -185,6 +186,26 @@ class CommitGenerator(private val configPath: String) {
                 print("\u001B[F")
             }
         }
+    }
+
+    private fun readKey(): Key {
+        val input = System.`in`.read()
+        return when (input) {
+            27 -> { // ESC sequence
+                System.`in`.read() // skip [
+                when (System.`in`.read()) {
+                    'A'.toInt() -> Key.UP
+                    'B'.toInt() -> Key.DOWN
+                    else -> Key.UNKNOWN
+                }
+            }
+            10, 13 -> Key.ENTER
+            else -> Key.UNKNOWN
+        }
+    }
+
+    enum class Key {
+        UP, DOWN, ENTER, UNKNOWN
     }
     
     private fun promptForScope(): String {

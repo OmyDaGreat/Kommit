@@ -86,28 +86,29 @@ jobs:
           mkdir -p build
           kotlinc CommitGenerator.kt -include-runtime -d build/kommit.jar
 
-      - name: Create Package Directory
+      - name: Prepare Files for Packaging
         run: |
-          mkdir -p kommit-${{ steps.version.outputs.version }}
-          cp build/kommit.jar kommit-${{ steps.version.outputs.version }}/
-          cp LICENSE kommit-${{ steps.version.outputs.version }}/ || echo "LICENSE file not found"
-          cp README.md kommit-${{ steps.version.outputs.version }}/ || echo "README.md file not found"
-          cp .kommit.yaml kommit-${{ steps.version.outputs.version }}/ || echo ".kommit.yaml file not found"
+          mkdir -p package
+          cp build/kommit.jar package/
+          cp LICENSE package/ || echo "LICENSE file not found"
+          cp README.md package/ || echo "README.md file not found"
+          cp .kommit.yaml package/ || echo ".kommit.yaml file not found"
           
           # Create batch file
-          echo '@echo off' > kommit-${{ steps.version.outputs.version }}/kommit.bat
-          echo 'java -jar "%~dp0\kommit.jar" %*' >> kommit-${{ steps.version.outputs.version }}/kommit.bat
+          echo '@echo off' > package/kommit.bat
+          echo 'java -jar "%~dp0\kommit.jar" %*' >> package/kommit.bat
 
       - name: Verify kommit.bat File Exists
         run: |
-          if [ ! -f kommit-${{ steps.version.outputs.version }}/kommit.bat ]; then
+          if [ ! -f package/kommit.bat ]; then
             echo "kommit.bat file not found!"
             exit 1
           fi
-  
+
       - name: Create ZIP Archive
         run: |
-          zip -r kommit-${{ steps.version.outputs.version }}.zip kommit-${{ steps.version.outputs.version }}/
+          cd package
+          zip -r ../kommit-${{ steps.version.outputs.version }}.zip ./*
 
       - name: Calculate SHA256
         id: sha

@@ -1,3 +1,3 @@
 git add *
-java -jar "C:\Users\Malefic\Documents\Programming\Libs\Scripts\kt\kommit\CommitGenerator.jar"
+java -jar "%~dp0\kommit.jar" %*
 git push

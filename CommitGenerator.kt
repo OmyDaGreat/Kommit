@@ -156,26 +156,40 @@ class CommitGenerator(private val configPath: String) {
     
     private fun promptSelection(message: String, options: List<String>): Int {
         println("\n$message:")
-        options.forEachIndexed { index, option ->
-            println("${index + 1}) $option")
-        }
-        
-        var selection: Int
+        var currentSelection = 0
+
         while (true) {
-            print("Enter your choice (1-${options.size}): ")
-            try {
-                selection = scanner.nextLine().toInt() - 1
-                if (selection in 0 until options.size) {
-                    break
+            options.forEachIndexed { index, option ->
+                if (index == currentSelection) {
+                    println("> $option")
                 } else {
-                    println("Invalid selection. Please try again.")
+                    println("  $option")
                 }
-            } catch (e: NumberFormatException) {
-                println("Please enter a valid number.")
+            }
+
+            when (System.`in`.read()) {
+                27 -> { // arrow keys start with an escape character
+                    System.`in`.read() // skip the [
+                    when (System.`in`.read()) {
+                        'A'.toInt() -> { // up arrow
+                            currentSelection = if (currentSelection > 0) currentSelection - 1 else options.size - 1
+                        }
+                        'B'.toInt() -> { // down arrow
+                            currentSelection = if (currentSelection < options.size - 1) currentSelection + 1 else 0
+                        }
+                    }
+                }
+                10, 13 -> { // enter key
+                    return currentSelection
+                }
+                else -> {} // ignore other keys
+            }
+
+            // Clear the console output
+            repeat(options.size) {
+                print("\u001B[F")
             }
         }
-        
-        return selection
     }
     
     private fun promptForScope(): String {

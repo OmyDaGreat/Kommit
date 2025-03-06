@@ -167,26 +167,21 @@ class CommitGenerator(private val configPath: String) {
                 }
             }
 
-            when (System.`in`.read()) {
-                27 -> { // arrow keys start with an escape character
-                    System.`in`.read() // skip the [
-                    when (System.`in`.read()) {
-                        'A'.toInt() -> { // up arrow
-                            currentSelection = if (currentSelection > 0) currentSelection - 1 else options.size - 1
-                        }
-                        'B'.toInt() -> { // down arrow
-                            currentSelection = if (currentSelection < options.size - 1) currentSelection + 1 else 0
-                        }
-                    }
+            when (val key = readLine()?.trim()) {
+                "w", "W" -> { // up arrow
+                    currentSelection = if (currentSelection > 0) currentSelection - 1 else options.size - 1
                 }
-                10, 13 -> { // enter key
+                "s", "S" -> { // down arrow
+                    currentSelection = if (currentSelection < options.size - 1) currentSelection + 1 else 0
+                }
+                "" -> { // enter key
                     return currentSelection
                 }
                 else -> {} // ignore other keys
             }
 
             // Clear the console output
-            repeat(options.size) {
+            repeat(options.size + 1) {
                 print("\u001B[F")
             }
         }

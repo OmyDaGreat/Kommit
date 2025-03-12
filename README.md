@@ -69,6 +69,7 @@ options:
   allowEmptyScopes: false
   issuePrefix: "ISSUES CLOSED:"
   changesPrefix: "BREAKING CHANGE:"
+  remindToStageChanges: true
   allowBreakingChanges:
     - feat
     - fix

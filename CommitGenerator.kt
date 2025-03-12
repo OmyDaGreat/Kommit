@@ -20,6 +20,7 @@ class CommitGenerator(
     private var allowEmptyScopes = true
     private var issuePrefix = "ISSUES CLOSED:"
     private var changesPrefix = "BREAKING CHANGE:"
+    private var remindToStageChanges = true
 
     init {
         try {
@@ -139,6 +140,7 @@ class CommitGenerator(
                     "footerPrefix" -> issuePrefix = value
                     "issuePrefix" -> issuePrefix = value
                     "changesPrefix" -> changesPrefix = value
+                    "remindToStageChanges" -> remindToStageChanges = value.equals("true", ignoreCase = true)
                     "allowBreakingChanges" -> i = parseAllowBreakingChanges(lines, i + 1)
                     "allowIssues" -> i = parseAllowIssues(lines, i + 1)
                 }
@@ -198,6 +200,10 @@ class CommitGenerator(
      */
     fun generateCommit() {
         println("Generating conventional commit...")
+
+        if (remindToStageChanges) {
+            println("Reminder: Please stage your changes before running kommit.")
+        }
 
         // Step 1: Select type
         val type = promptSelection("Select the type of change", types.map { "${it.value} - ${it.name}" })
@@ -340,8 +346,8 @@ class CommitGenerator(
         options: List<String>,
     ): String =
         when {
-            allowEmptyScopes && selection == scopes.size -> ""
-            allowCustomScopes && selection == scopes.size - 1 -> promptForInput("Enter custom scope")
+            allowEmptyScopes && selection == options.size - 1 -> ""
+            allowCustomScopes && selection == options.size - 2 -> promptForInput("Enter custom scope")
             else -> options[selection]
         }
 

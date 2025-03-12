@@ -201,8 +201,8 @@ class CommitGenerator(
     fun generateCommit() {
         println("Generating conventional commit...")
 
-        if (remindToStageChanges) {
-            println("Reminder: Please stage your changes before running kommit.")
+        if (remindToStageChanges && !hasStagedChanges()) {
+            println("\nPlease stage your changes before kommiting!")
         }
 
         // Step 1: Select type
@@ -493,6 +493,29 @@ class CommitGenerator(
             println("Error creating commit: ${e.message}")
         }
     }
+
+    /**
+     * Checks if there are any staged changes in the Git repository.
+     * @return True if there are staged changes, false otherwise.
+     */
+    private fun hasStagedChanges(): Boolean =
+        try {
+            val process =
+                ProcessBuilder("git", "diff", "--cached", "--name-only")
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .redirectError(ProcessBuilder.Redirect.PIPE)
+                    .start()
+
+            val output =
+                process.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .trim()
+            process.waitFor() == 0 && output.isNotEmpty()
+        } catch (e: Exception) {
+            println("Error checking staged changes: ${e.message}")
+            false
+        }
 
     /**
      * Generates a default .kommit.yaml file in the current directory.

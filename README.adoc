@@ -22,29 +22,38 @@ A simple command-line tool written in Kotlin that helps generate conventional co
 
 1. Add the Malefic bucket to Scoop:
 
-    ```sh
-    scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
-    ```
++
+[source,sh]
+----
+scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
+----
 
 2. Install Kommit:
 
-    ```sh
-    scoop install kommit
-    ```
+
++
+[source,sh]
+----
+scoop install kommit
+----
 
 == Usage
 
 1. Run the following command to create a default `.kommit.yaml` configuration file in your project root:
 
-    ```sh
-    kommit create
-    ```
++
+[source,sh]
+----
+kommit create
+----
 
 2. Run the script:
 
-    ```sh
-    kommit
-    ```
++
+[source,sh]
+----
+kommit
+----
 
 3. Follow the prompts to generate your commit message.
 

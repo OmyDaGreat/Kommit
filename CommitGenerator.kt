@@ -2,6 +2,8 @@ import java.io.File
 import java.util.Scanner
 import kotlin.system.exitProcess
 
+private const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
+
 /**
  * A Kotlin script for generating conventional commits based on a YAML-inspired config file
  * inspired by cz-customizable but with a simpler format and no external dependencies.
@@ -400,10 +402,13 @@ class CommitGenerator(
         message: String,
         defaultNo: Boolean = true,
     ): Boolean {
-        val nonDefault = if (defaultNo) "y" to "yes" else "n" to "no"
         println("\n$message (y/n):")
         val response = scanner.nextLine().lowercase()
-        return response in setOf(nonDefault.first, nonDefault.second)
+        return if (defaultNo) {
+            response == "y" || response == "yes"
+        } else {
+            response != "n" && response != "no"
+        }
     }
 
     /**
@@ -484,6 +489,58 @@ class CommitGenerator(
     }
 
     /**
+     * Generates a default .kommit.yaml file in the current directory.
+     */
+    fun generateDefaultConfig() {
+        val defaultConfig =
+            """
+            # Conventional Commit Configuration
+
+            types:
+              - feat: A new feature
+              - fix: A bug fix
+              - docs: Documentation only changes
+              - style: Changes that do not affect the meaning of the code
+              - refactor: A code change that neither fixes a bug nor adds a feature
+              - perf: A code change that improves performance
+              - test: Adding missing tests or correcting existing tests
+              - build: Changes that affect the build system or external dependencies
+              - ci: Changes to our CI configuration files and scripts
+              - chore: Other changes that don't modify src or test files
+              - revert: Reverts a previous commit
+
+            scopes:
+              - core
+              - ui
+              - api
+              - docs
+
+            options:
+              allowCustomScopes: true
+              allowEmptyScopes: true
+              issuePrefix: "ISSUES CLOSED:"
+              changesPrefix: "BREAKING CHANGE:"
+              allowBreakingChanges:
+                - feat
+                - fix
+                - refactor
+              allowIssues:
+                - feat
+                - fix
+                - docs
+            """.trimIndent()
+
+        val configFile = File(DEFAULT_CONFIG_PATH)
+        if (configFile.exists()) {
+            println("Error: .kommit.yaml already exists in the current directory.")
+            exitProcess(1)
+        }
+
+        configFile.writeText(defaultConfig)
+        println(".kommit.yaml has been created successfully.")
+    }
+
+    /**
      * Data class representing a commit type.
      * @param value The value of the commit type.
      * @param name The name of the commit type.
@@ -499,12 +556,22 @@ class CommitGenerator(
  * @param args The command-line arguments.
  */
 fun main(args: Array<String>) {
-    val configPath = if (args.isNotEmpty()) args[0] else ".kommit.yaml"
-    try {
-        val generator = CommitGenerator(configPath)
-        generator.generateCommit()
-    } catch (e: Exception) {
-        System.err.println("Error: ${e.message}")
-        exitProcess(1)
+    if (args.isNotEmpty() && args[0] == "create") {
+        try {
+            val generator = CommitGenerator(DEFAULT_CONFIG_PATH)
+            generator.generateDefaultConfig()
+        } catch (e: Exception) {
+            System.err.println("Error: ${e.message}")
+            exitProcess(1)
+        }
+    } else {
+        val configPath = if (args.isNotEmpty()) args[0] else DEFAULT_CONFIG_PATH
+        try {
+            val generator = CommitGenerator(configPath)
+            generator.generateCommit()
+        } catch (e: Exception) {
+            System.err.println("Error: ${e.message}")
+            exitProcess(1)
+        }
     }
 }

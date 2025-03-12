@@ -17,15 +17,18 @@ scopes:
   - core
   - ui
   - api
-  - auth
-  - database
-  - config
   - docs
 
 options:
   allowCustomScopes: true
-  footerPrefix: ISSUES CLOSED:
+  allowEmptyScopes: true
+  issuePrefix: "ISSUES CLOSED:"
+  changesPrefix: "BREAKING CHANGE:"
   allowBreakingChanges:
     - feat
     - fix
     - refactor
+  allowIssues:
+    - feat
+    - fix
+    - docs

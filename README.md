@@ -22,24 +22,24 @@ A simple command-line tool written in Kotlin that helps generate conventional co
 
 1. Add the Malefic bucket to Scoop:
 
-```sh
-scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
-```
+    ```sh
+    scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
+    ```
 
 2. Install Kommit:
-
-```sh
-scoop install kommit
-```
+    
+    ```sh
+    scoop install kommit
+    ```
 
 ## Usage
 
 1. Place the `.kommit.yaml` file in your project root or specify a custom path.
 2. Run the script:
 
-```sh
-kommit
-```
+    ```sh
+    kommit
+    ```
 
 3. Follow the prompts to generate your commit message.
 
@@ -61,15 +61,22 @@ scopes:
   - core
   - ui
   - api
+  - docs
 
 # Configuration Options
 options:
   allowCustomScopes: true
-  footerPrefix: ISSUES CLOSED:
+  allowEmptyScopes: false
+  issuePrefix: "ISSUES CLOSED:"
+  changesPrefix: "BREAKING CHANGE:"
   allowBreakingChanges:
     - feat
     - fix
     - refactor
+  allowIssues:
+    - feat
+    - fix
+    - docs
 ```
 
 ### Configuration Options
@@ -77,8 +84,11 @@ options:
 - `types`: List of commit types with their descriptions
 - `scopes`: List of available scopes
 - `options.allowCustomScopes`: Whether to allow custom scopes (true/false)
+- `options.allowEmptyScopes`: Whether to allow empty scopes (true/false)
 - `options.allowBreakingChanges`: List of types that can have breaking changes
-- `options.footerPrefix`: The prefix used for issue references in the footer
+- `options.allowIssues`: List of types that can have issue references
+- `options.issuePrefix`: The prefix used for issue references in the footer
+- `options.changesPrefix`: The prefix used for breaking changes in the footer
 
 ## Example Commit Message
 

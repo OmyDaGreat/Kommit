@@ -73,10 +73,14 @@ types:
 
 # Available Scopes
 scopes:
-  - core
-  - ui
-  - api
-  - docs
+  all:
+    - core
+    - ui
+    - api
+  chore:
+    - github
+    - deps
+
 
 # Configuration Options
 options:

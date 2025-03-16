@@ -1,5 +1,5 @@
+import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.util.Scanner
 import kotlin.system.exitProcess
 
 private const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
@@ -11,9 +11,8 @@ private const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
 class CommitGenerator(
     private val configPath: String,
 ) {
-    private val scanner = Scanner(System.`in`)
     private val types = mutableListOf<CommitType>()
-    private val scopes = mutableListOf<String>()
+    private val scopes = mutableMapOf<String, List<String>>()
     private val allowBreakingChanges = mutableListOf<String>()
     private val allowIssues = mutableListOf<String>()
     private var allowCustomScopes = true
@@ -40,157 +39,46 @@ class CommitGenerator(
         val configFile = File(configPath)
         require(configFile.exists()) { "Config file not found at: $configPath" }
 
-        val lines = configFile.readLines()
-        var i = 0
+        val yaml = Yaml()
+        val config = yaml.load<Map<String, Any>>(configFile.readText())
 
-        while (i < lines.size) {
-            val line = lines[i].trim()
-
-            // Skip empty lines and comments
-            if (line.isEmpty() || line.startsWith("#")) {
-                i++
-                continue
-            }
-
-            when (line) {
-                "types:" -> i = parseTypes(lines, i + 1)
-                "scopes:" -> i = parseScopes(lines, i + 1)
-                "options:" -> i = parseOptions(lines, i + 1)
-                else -> i++
-            }
-        }
-
-        check(types.isNotEmpty()) { "No commit types found in configuration file" }
+        parseTypes(config["types"] as List<Map<String, String>>)
+        parseScopes(config["scopes"] as Map<String, List<String>>)
+        parseOptions(config["options"] as Map<String, Any>)
     }
 
     /**
-     * Parses the commit types from the configuration file.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing types.
-     * @return The index after the last parsed type.
+     * Parses the list of commit types from the configuration.
+     * @param typesList The list of commit types, each represented as a map with key-value pairs.
      */
-    private fun parseTypes(
-        lines: List<String>,
-        startIndex: Int,
-    ): Int {
-        var i = startIndex
-        while (i < lines.size && lines[i].startsWith("  ")) {
-            val typeLine = lines[i].trim()
-            if (typeLine.startsWith("- ")) {
-                val typeParts = typeLine.substring(2).split(":", limit = 2)
-                if (typeParts.size == 2) {
-                    val value = typeParts[0].trim()
-                    val name = typeParts[1].trim()
-                    types.add(CommitType(value, name))
-                }
+    private fun parseTypes(typesList: List<Map<String, String>>) {
+        typesList.forEach { type ->
+            type.forEach { (key, value) ->
+                types.add(CommitType(key, value))
             }
-            i++
         }
-        return i
     }
 
     /**
-     * Parses the commit scopes from the configuration file.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing scopes.
-     * @return The index after the last parsed scope.
+     * Parses the map of scopes from the configuration.
+     * @param scopesMap The map of scopes.
      */
-    private fun parseScopes(
-        lines: List<String>,
-        startIndex: Int,
-    ): Int {
-        var i = startIndex
-        while (i < lines.size && lines[i].startsWith("  ")) {
-            val scopeLine = lines[i].trim()
-            if (scopeLine.startsWith("- ")) {
-                val scope = scopeLine.substring(2).trim()
-                scopes.add(scope)
-            }
-            i++
-        }
-        return i
+    private fun parseScopes(scopesMap: Map<String, List<String>>) {
+        scopes.putAll(scopesMap)
     }
 
     /**
-     * Parses the options from the configuration file.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing options.
-     * @return The index after the last parsed option.
+     * Parses the options from the configuration.
+     * @param options The map of options with their corresponding values.
      */
-    private fun parseOptions(
-        lines: List<String>,
-        startIndex: Int,
-    ): Int {
-        var i = startIndex
-        while (i < lines.size && lines[i].startsWith("  ")) {
-            val optionLine = lines[i].trim()
-            val optionParts = optionLine.split(":", limit = 2)
-
-            if (optionParts.size == 2) {
-                val key = optionParts[0].trim()
-                var value = optionParts[1].trim()
-
-                if (value.startsWith("\"") && value.endsWith("\"")) {
-                    value = value.substring(1, value.length - 1)
-                }
-
-                when (key) {
-                    "allowCustomScopes" -> allowCustomScopes = value.equals("true", ignoreCase = true)
-                    "allowEmptyScopes" -> allowEmptyScopes = value.equals("true", ignoreCase = true)
-                    "footerPrefix" -> issuePrefix = value
-                    "issuePrefix" -> issuePrefix = value
-                    "changesPrefix" -> changesPrefix = value
-                    "remindToStageChanges" -> remindToStageChanges = value.equals("true", ignoreCase = true)
-                    "allowBreakingChanges" -> i = parseAllowBreakingChanges(lines, i + 1)
-                    "allowIssues" -> i = parseAllowIssues(lines, i + 1)
-                }
-            }
-            i++
-        }
-        return i
-    }
-
-    /**
-     * Parses the allowed breaking changes from the configuration file.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing breaking changes.
-     * @return The index after the last parsed breaking change.
-     */
-    private fun parseAllowBreakingChanges(
-        lines: List<String>,
-        startIndex: Int,
-    ) = parseList(allowBreakingChanges, lines, startIndex)
-
-    /**
-     * Parses the allowed issues from the configuration file.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing issues.
-     * @return The index after the last parsed issue.
-     */
-    private fun parseAllowIssues(
-        lines: List<String>,
-        startIndex: Int,
-    ) = parseList(allowIssues, lines, startIndex)
-
-    /**
-     * Parses a list of strings from the configuration file.
-     * @param list The mutable list to add parsed strings to.
-     * @param lines The lines of the configuration file.
-     * @param startIndex The starting index for parsing the list.
-     * @return The index after the last parsed item.
-     */
-    fun parseList(
-        list: MutableList<String>,
-        lines: List<String>,
-        startIndex: Int,
-    ): Int {
-        var i = startIndex
-        while (i < lines.size && lines[i].trim().startsWith("- ")) {
-            val type = lines[i].trim().substring(2).trim()
-            list.add(type)
-            i++
-        }
-        return i
+    private fun parseOptions(options: Map<String, Any>) {
+        allowCustomScopes = options["allowCustomScopes"] as Boolean? != false
+        allowEmptyScopes = options["allowEmptyScopes"] as Boolean? != false
+        issuePrefix = options["issuePrefix"] as String? ?: "ISSUES CLOSED:"
+        changesPrefix = options["changesPrefix"] as String? ?: "BREAKING CHANGE:"
+        remindToStageChanges = options["remindToStageChanges"] as Boolean? != false
+        allowBreakingChanges.addAll(options["allowBreakingChanges"] as List<String>? ?: emptyList())
+        allowIssues.addAll(options["allowIssues"] as List<String>? ?: emptyList())
     }
 
     /**
@@ -210,7 +98,7 @@ class CommitGenerator(
         val selectedType = types[type].value
 
         // Step 2: Enter scope
-        val scope = promptForScope()
+        val scope = promptForScope(selectedType)
 
         // Step 3: Enter short description
         val shortDescription = promptForInput("Enter a short description")
@@ -277,7 +165,7 @@ class CommitGenerator(
         while (true) {
             print("Enter your choice (1-${options.size}): ")
             try {
-                selection = scanner.nextLine().toInt() - 1
+                selection = readln().toInt() - 1
                 if (selection in options.indices) {
                     break
                 } else {
@@ -296,12 +184,12 @@ class CommitGenerator(
      * Handles cases where scopes are empty or custom scopes are allowed.
      * @return The entered or selected scope.
      */
-    private fun promptForScope(): String {
-        if (scopes.isEmpty()) {
+    private fun promptForScope(type: String): String {
+        if (scopes[type]?.isEmpty() ?: scopes["all"].isNullOrEmpty()) {
             return handleEmptyScopes()
         }
 
-        val options = buildScopeOptions()
+        val options = buildScopeOptions(type)
         val selection = promptSelection("Select a scope", options)
         return handleScopeSelection(selection, options)
     }
@@ -326,9 +214,8 @@ class CommitGenerator(
      * Builds the list of scope options for the user to select from.
      * @return The list of scope options.
      */
-    private fun buildScopeOptions(): List<String> =
-        scopes
-            .toList()
+    private fun buildScopeOptions(type: String): List<String> =
+        (scopes[type] ?: scopes["all"]!!)
             .let {
                 if (allowCustomScopes) it + "Other (custom scope)" else it
             }.let {
@@ -358,7 +245,7 @@ class CommitGenerator(
      */
     private fun promptForInput(message: String): String {
         println("\n$message:")
-        return scanner.nextLine().trim()
+        return readln().trim()
     }
 
     /**
@@ -375,7 +262,7 @@ class CommitGenerator(
         var emptyLineCount = 0
 
         while (emptyLineCount < 1) {
-            line = scanner.nextLine()
+            line = readln()
             if (line.trim().isEmpty()) {
                 emptyLineCount++
             } else {
@@ -409,7 +296,7 @@ class CommitGenerator(
         defaultNo: Boolean = true,
     ): Boolean {
         println("\n$message (y/n):")
-        val response = scanner.nextLine().lowercase()
+        val response = readln().lowercase()
         return if (defaultNo) {
             response == "y" || response == "yes"
         } else {
@@ -539,10 +426,13 @@ class CommitGenerator(
               - revert: Reverts a previous commit
 
             scopes:
-              - core
-              - ui
-              - api
-              - docs
+              all:
+                - core
+                - ui
+                - api
+              chore:
+                - github
+                - deps
 
             options:
               allowCustomScopes: true

@@ -52,19 +52,19 @@ jobs:
           # Get the latest tag or default to 0.1.0 if no tags exist
           git fetch --tags
           latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
-          
+
           if [ -z "$latest_tag" ]; then
             latest_version="0.1.0"
           else
             latest_version="${latest_tag#v}"
           fi
-          
+
           # Split version into major, minor, patch
           IFS='.' read -r major minor patch <<< "$latest_version"
-          
+
           # Bump version based on input or default to patch
           bump_type="${{ github.event.inputs.version_bump || 'patch' }}"
-          
+
           if [ "$bump_type" == "major" ]; then
             major=$((major + 1))
             minor=0
@@ -75,25 +75,35 @@ jobs:
           else
             patch=$((patch + 1))
           fi
-          
+
           new_version="$major.$minor.$patch"
           echo "New version: $new_version"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "tag=v$new_version" >> $GITHUB_OUTPUT
 
+      - name: Get latest commit message
+        id: commit_message
+        run: |
+          latest_commit_message=$(git log -1 --pretty=format:%s)
+          echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
+
       - name: Compile Kotlin Application
         run: |
           mkdir -p build
-          kotlinc CommitGenerator.kt -include-runtime -d build/kommit.jar
+          kotlinc -cp libs/snakeyaml-2.4.jar CommitGenerator.kt -include-runtime -d build/kommit.jar
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
+          JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
+          KOTLIN_HOME: /opt/hostedtoolcache/kotlin/2.1.10/x64/kotlinc
 
       - name: Prepare Files for Packaging
         run: |
           mkdir -p package
           cp build/kommit.jar package/
           cp LICENSE package/ || echo "LICENSE file not found"
-          cp README.md package/ || echo "README.md file not found"
+          cp README.adoc package/ || echo "README.adoc file not found"
           cp .kommit.yaml package/ || echo ".kommit.yaml file not found"
-          
+
           # Create batch file
           echo '@echo off' > package/kommit.bat
           echo 'java -jar "%~dp0\kommit.jar" %*' >> package/kommit.bat
@@ -153,12 +163,12 @@ jobs:
           name: Release ${{ steps.version.outputs.version }}
           body: |
             Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
-            
+
             ### SHA256 Checksum
             ```
             ${{ steps.sha.outputs.sha256 }}
             ```
-            
+
             ### Installation via Scoop
             ```
             scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
@@ -177,4 +187,4 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: OmyDaGreat/MaleficBucket
           event-type: update-kommit
-          client-payload: '{"version": "${{ steps.version.outputs.version }}", "sha256": "${{ steps.sha.outputs.sha256 }}", "tag": "${{ steps.version.outputs.tag }}"}'
+          client-payload: '{"version": "${{ steps.version.outputs.version }}", "sha256": "${{ steps.sha.outputs.sha256 }}", "tag": "${{ steps.version.outputs.tag }}", "latest_commit_message": "${{ steps.commit_message.outputs.latest_commit_message }}"}'

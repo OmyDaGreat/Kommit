@@ -14,10 +14,13 @@ types:
   - revert: Reverts a previous commit
 
 scopes:
-  - core
-  - ui
-  - api
-  - docs
+  all:
+    - core
+    - ui
+    - api
+  chore:
+    - github
+    - deps
 
 options:
   allowCustomScopes: true

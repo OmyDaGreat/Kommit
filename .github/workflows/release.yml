@@ -88,9 +88,7 @@ jobs:
           echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
 
       - name: Compile Kotlin Application
-        run: |
-          mkdir -p build
-          kotlinc -cp libs/snakeyaml-2.4.jar CommitGenerator.kt -include-runtime -d build/kommit.jar
+        run: ./gradlew shadowJar
         env:
           JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
           JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
@@ -99,7 +97,7 @@ jobs:
       - name: Prepare Files for Packaging
         run: |
           mkdir -p package
-          cp build/kommit.jar package/
+          cp build/libs/kommit.jar package/
           cp LICENSE package/ || echo "LICENSE file not found"
           cp README.adoc package/ || echo "README.adoc file not found"
           cp .kommit.yaml package/ || echo ".kommit.yaml file not found"

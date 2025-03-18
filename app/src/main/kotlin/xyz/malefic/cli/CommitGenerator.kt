@@ -1,3 +1,5 @@
+package xyz.malefic.cli
+
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 import kotlin.system.exitProcess
@@ -472,7 +474,7 @@ class CommitGenerator(
 }
 
 /**
- * The main function to run the CommitGenerator.
+ * The xyz.malefic.cli.main function to run the xyz.malefic.cli.CommitGenerator.
  * @param args The command-line arguments.
  */
 fun main(args: Array<String>) {

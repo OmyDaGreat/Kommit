@@ -87,6 +87,9 @@ jobs:
           latest_commit_message=$(git log -1 --pretty=format:%s)
           echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
 
+      - name: Make Gradlew executable
+        run: chmod +x gradlew
+
       - name: Compile Kotlin Application
         run: ./gradlew shadowJar
         env:

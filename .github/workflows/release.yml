@@ -100,7 +100,7 @@ jobs:
       - name: Prepare Files for Packaging
         run: |
           mkdir -p package
-          cp build/libs/kommit.jar package/
+          cp app/build/libs/kommit.jar package/
           cp LICENSE package/ || echo "LICENSE file not found"
           cp README.adoc package/ || echo "README.adoc file not found"
           cp .kommit.yaml package/ || echo ".kommit.yaml file not found"

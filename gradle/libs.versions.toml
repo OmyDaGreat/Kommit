@@ -4,7 +4,7 @@
 [versions]
 yaml = "2.4"
 shadow = "8.1.1"
-kotlin = "2.1.10"
+kotlin = "2.1.20"
 
 [libraries]
 yaml = { group = "org.yaml", name = "snakeyaml", version.ref = "yaml" }

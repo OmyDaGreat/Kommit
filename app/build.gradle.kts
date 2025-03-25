@@ -10,12 +10,13 @@ repositories {
 
 dependencies {
     implementation(libs.yaml)
+    implementation(libs.clikt)
 }
 
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useKotlinTest("2.1.0")
+            useKotlinTest("2.1.20")
         }
     }
 }

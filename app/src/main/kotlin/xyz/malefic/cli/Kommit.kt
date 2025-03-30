@@ -16,6 +16,6 @@ class Kommit :
     override val printHelpOnEmptyArgs = true
 
     init {
-        subcommands(CommitCommand(), CreateConfigCommand(), ResetGpgAgentCommand())
+        subcommands(CommitCommand(), CreateConfigCommand(), ResetGpgAgentCommand(), PushCommand())
     }
 }

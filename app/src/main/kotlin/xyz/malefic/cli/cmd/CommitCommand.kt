@@ -1,9 +1,10 @@
-package xyz.malefic.cli
+package xyz.malefic.cli.cmd
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import org.yaml.snakeyaml.Yaml
+import xyz.malefic.cli.DEFAULT_CONFIG_PATH
 import java.io.File
 import kotlin.system.exitProcess
 

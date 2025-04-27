@@ -10,12 +10,6 @@ A simple command-line tool written in Kotlin that helps generate conventional co
 * Support for breaking changes and issue references
 * No external libraries required
 
-== Requirements
-
-* Kotlin 1.5+
-* JDK 8+
-* Git
-
 == Installation
 
 === Using Scoop (Windows)
@@ -57,6 +51,35 @@ kommit
 
 3. Follow the prompts to generate your commit message.
 
+== Subcommands
+
+Kommit provides several subcommands to perform various Git-related tasks. Below is a list of all available subcommands, grouped by functionality:
+
+=== Commit Management
+* `commit`: Generate a conventional commit message interactively.
+* `amend`: Amend the last commit with a new message or staged changes.
+* `log`: Display a formatted log of commits.
+
+=== Branch Management
+* `branch`: Manage Git branches (create, checkout, merge, etc.).
+
+=== Repository Management
+* `init`: Initialize a new Git repository.
+* `pull`: Pull changes from the remote repository.
+* `push`: Push changes to the remote repository.
+* `fetch`: Fetch changes from the remote repository.
+
+=== File Management
+* `stage`: Stage files for a commit.
+* `status`: Show the working tree status.
+
+=== Tag Management
+* `tag`: Create or list Git tags.
+
+=== Miscellaneous
+* `create`: Create a default `.kommit.yaml` configuration file in the project root.
+* `reset-gpg`: Reset GPG signing configuration for commits.
+
 == Configuration File Format
 
 The configuration file uses a YAML-inspired format:
@@ -87,7 +110,7 @@ options:
   allowCustomScopes: true
   allowEmptyScopes: false
   issuePrefix: "ISSUES CLOSED:"
-  changesPrefix: "BREAKING CHANGE:"
+  changesPrefix: "BREAKING CHANGES:"
   remindToStageChanges: true
   allowBreakingChanges:
     - feat
@@ -103,7 +126,7 @@ options:
 * `types`: List of commit types with their descriptions
 * `scopes`: List of available scopes
 
-NOTE: It's not necessary to have all of the options, but the following are available:
+NOTE: It's not necessary to have all the options, but the following are available:
 
 * `options.allowCustomScopes`: Whether to allow custom scopes (true/false)
 * `options.allowEmptyScopes`: Whether to allow empty scopes (true/false)
@@ -121,7 +144,7 @@ feat(ui)!: add new button component
 
 This adds a new reusable button component with various styles and sizes.
 
-BREAKING CHANGE: Changes the API for button styling
+BREAKING CHANGES: Changes the API for button styling
 
 ISSUES CLOSED: #123, #456
 ----

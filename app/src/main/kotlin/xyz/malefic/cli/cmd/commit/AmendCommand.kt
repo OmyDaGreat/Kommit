@@ -1,11 +1,10 @@
-package xyz.malefic.cli.cmd
+package xyz.malefic.cli.cmd.commit
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.theme
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import java.lang.ProcessBuilder.Redirect.INHERIT
 
 /**
  * Command for amending the last commit.
@@ -46,8 +45,8 @@ class AmendCommand :
 
             val amendProcess =
                 ProcessBuilder(command)
-                    .redirectOutput(INHERIT)
-                    .redirectError(INHERIT)
+                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
                     .start()
 
             val exitCode = amendProcess.waitFor()

@@ -1,10 +1,13 @@
-package xyz.malefic.cli.cmd
+package xyz.malefic.cli.cmd.commit
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.theme
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import org.yaml.snakeyaml.Yaml
 import xyz.malefic.cli.DEFAULT_CONFIG_PATH
+import xyz.malefic.cli.cmd.util.nullGet
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -15,6 +18,13 @@ class CommitCommand :
     CliktCommand(
         name = "commit",
     ) {
+    /**
+     * Provides help information for the command.
+     * @param context The context in which the command is executed.
+     * @return A string containing the help information.
+     */
+    override fun help(context: Context): String = context.theme.info("Generate a commit message")
+
     /**
      * Path to the configuration file.
      */
@@ -31,7 +41,7 @@ class CommitCommand :
     private var allowCustomScopes = true
     private var allowEmptyScopes = true
     private var issuePrefix = "ISSUES CLOSED:"
-    private var changesPrefix = "BREAKING CHANGE:"
+    private var changesPrefix = "BREAKING CHANGES:"
     private var remindToStageChanges = true
 
     /**
@@ -61,7 +71,7 @@ class CommitCommand :
 
         parseTypes(config["types"] as List<Map<String, String>>)
         parseScopes(config["scopes"] as Map<String, List<String>>)
-        parseOptions(config["options"] as Map<String, Any>)
+        parseOptions(config["options"] as? Map<String, Any>)
     }
 
     /**
@@ -88,14 +98,14 @@ class CommitCommand :
      * Parses the options from the configuration.
      * @param options The map of options with their corresponding values.
      */
-    private fun parseOptions(options: Map<String, Any>) {
-        allowCustomScopes = options["allowCustomScopes"] as Boolean? != false
-        allowEmptyScopes = options["allowEmptyScopes"] as Boolean? != false
-        issuePrefix = options["issuePrefix"] as String? ?: "ISSUES CLOSED:"
-        changesPrefix = options["changesPrefix"] as String? ?: "BREAKING CHANGE:"
-        remindToStageChanges = options["remindToStageChanges"] as Boolean? != false
-        allowBreakingChanges.addAll(options["allowBreakingChanges"] as List<String>? ?: emptyList())
-        allowIssues.addAll(options["allowIssues"] as List<String>? ?: emptyList())
+    private fun parseOptions(options: Map<String, Any>?) {
+        allowCustomScopes = options.nullGet("allowCustomScopes", true) as Boolean
+        allowEmptyScopes = options.nullGet("allowEmptyScopes", true) as Boolean
+        issuePrefix = options.nullGet("issuePrefix", "ISSUES CLOSED:") as String
+        changesPrefix = options.nullGet("changesPrefix", "BREAKING CHANGES:") as String
+        remindToStageChanges = options.nullGet("remindToStageChanges", true) as Boolean
+        allowBreakingChanges.addAll(options.nullGet("allowBreakingChanges", emptyList<String>()) as List<String>)
+        allowIssues.addAll(options.nullGet("allowIssues", emptyList<String>()) as List<String>)
     }
 
     /**

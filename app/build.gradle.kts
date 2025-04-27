@@ -11,6 +11,7 @@ repositories {
 dependencies {
     implementation(libs.yaml)
     implementation(libs.clikt)
+    implementation(libs.mordant)
 }
 
 testing {

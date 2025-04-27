@@ -30,16 +30,16 @@ class Kommit :
 
     init {
         subcommands(
-            CommitCommand(),
             AmendCommand(),
-            CreateConfigCommand(),
-            ResetGpgCommand(),
-            PushCommand(),
-            LogCommand(),
             BranchCommand(),
-            PullCommand(),
+            CommitCommand(),
+            CreateConfigCommand(),
             FetchCommand(),
             InitCommand(),
+            LogCommand(),
+            PullCommand(),
+            PushCommand(),
+            ResetGpgCommand(),
             StageCommand(),
             StatusCommand(),
             TagCommand(),

@@ -87,6 +87,34 @@ jobs:
           latest_commit_message=$(git log -1 --pretty=format:%s)
           echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the latest tag or use the initial commit if no tags exist
+          latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            # If no tags exist, get all commits
+            echo "No previous tags found, including all commits in changelog"
+            changelog=$(git log --pretty=format:"* %s" --reverse)
+          else
+            # Get commits since the last tag
+            echo "Getting commits since $latest_tag"
+            changelog=$(git log ${latest_tag}..HEAD --pretty=format:"* %s" --reverse)
+
+            # If no commits since last tag, add a message
+            if [ -z "$changelog" ]; then
+              changelog="No changes since last release"
+            fi
+          fi
+
+          # Escape newlines for GitHub Actions output
+          changelog="${changelog//'%'/'%25'}"
+          changelog="${changelog//$'\n'/'%0A'}"
+          changelog="${changelog//$'\r'/'%0D'}"
+
+          echo "changelog=$changelog" >> $GITHUB_OUTPUT
+
       - name: Make Gradlew executable
         run: chmod +x gradlew
 
@@ -159,18 +187,36 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.version }}
           body: |
-            Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
+            # 🚀 Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
 
-            ### SHA256 Checksum
+            **Kommit** is a Kotlin-based conventional commit message generator that helps you create standardized commit messages following best practices.
+
+            ## 📋 What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## 📦 Installation
+
+            ### 🪣 Via Scoop (Windows)
+            ```powershell
+            scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
+            scoop install kommit
+            ```
+
+            ### 📥 Direct Download
+            Download the [kommit-${{ steps.version.outputs.version }}.zip](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-${{ steps.version.outputs.version }}.zip) file from this release.
+
+            ## 🔐 Verification
+
+            ### 🔑 SHA256 Checksum
             ```
             ${{ steps.sha.outputs.sha256 }}
             ```
 
-            ### Installation via Scoop
-            ```
-            scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
-            scoop install kommit
-            ```
+            ## 📚 Documentation
+            For more information, check out the [README](https://github.com/OmyDaGreat/Kommit/blob/main/README.adoc) file.
+
+            ## 🙏 Feedback
+            If you encounter any issues or have suggestions, please [open an issue](https://github.com/OmyDaGreat/Kommit/issues/new) on GitHub.
           draft: false
           prerelease: false
           files: |

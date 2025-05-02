@@ -48,7 +48,7 @@ class ResetGpgCommand :
      * Redirects the output and error streams to the console.
      */
     private fun connectGpgAgent() {
-        val connectProcess = process("gpg-connect-agent")
+        val connectProcess = process("gpg-connect-agent", "/bye")
 
         val connectExitCode = connectProcess.waitFor()
         echo(

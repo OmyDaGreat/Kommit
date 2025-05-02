@@ -7,6 +7,9 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import org.yaml.snakeyaml.Yaml
 import xyz.malefic.cli.DEFAULT_CONFIG_PATH
+import xyz.malefic.cli.cmd.system.PushCommand
+import xyz.malefic.cli.cmd.util.git
+import xyz.malefic.cli.cmd.util.gitPipe
 import xyz.malefic.cli.cmd.util.nullGet
 import java.io.File
 import kotlin.system.exitProcess
@@ -23,7 +26,7 @@ class CommitCommand :
      * @param context The context in which the command is executed.
      * @return A string containing the help information.
      */
-    override fun help(context: Context): String = context.theme.info("Generate a commit message")
+    override fun help(context: Context) = context.theme.info("Generate a commit message")
 
     /**
      * Path to the configuration file.
@@ -43,6 +46,7 @@ class CommitCommand :
     private var issuePrefix = "ISSUES CLOSED:"
     private var changesPrefix = "BREAKING CHANGES:"
     private var remindToStageChanges = true
+    private var autoPush = false
 
     /**
      * Executes the command to load the configuration and generate the commit message.
@@ -60,7 +64,6 @@ class CommitCommand :
     /**
      * Loads the configuration from the specified config file.
      * Parses the file and initializes commit types, scopes, and options.
-     * @throws IllegalArgumentException if the config file is not found or no commit types are defined.
      */
     private fun loadConfig() {
         val configFile = File(configPath)
@@ -104,6 +107,7 @@ class CommitCommand :
         issuePrefix = options.nullGet("issuePrefix", "ISSUES CLOSED:") as String
         changesPrefix = options.nullGet("changesPrefix", "BREAKING CHANGES:") as String
         remindToStageChanges = options.nullGet("remindToStageChanges", true) as Boolean
+        autoPush = options.nullGet("autoPush", true) as Boolean
         allowBreakingChanges.addAll(options.nullGet("allowBreakingChanges", emptyList<String>()) as List<String>)
         allowIssues.addAll(options.nullGet("allowIssues", emptyList<String>()) as List<String>)
     }
@@ -120,23 +124,17 @@ class CommitCommand :
             echo("\nPlease stage your changes before kommiting!")
         }
 
-        // Step 1: Select type
         val type = promptSelection("Select the type of change", types.map { "${it.value} - ${it.name}" })
         val selectedType = types[type].value
 
-        // Step 2: Enter scope
         val scope = promptForScope(selectedType)
 
-        // Step 3: Enter short description
         val shortDescription = promptForInput("Enter a short description")
 
-        // Check if breaking changes are allowed for this type
         val canBeBreaking = selectedType in allowBreakingChanges
 
-        // Step 4: Enter longer description (optional)
         val longDescription = promptForLongDescription()
 
-        // Step 5: Breaking changes
         val isBreaking =
             if (canBeBreaking) {
                 promptYesNo("Are there any breaking changes?")
@@ -146,10 +144,8 @@ class CommitCommand :
 
         val breakingChanges = if (isBreaking) promptForInput("Describe the breaking changes") else ""
 
-        // Step 6: Issues closed
         val issues = promptForIssues()
 
-        // Generate the commit message
         val commitMessage =
             buildCommitMessage(
                 selectedType,
@@ -161,11 +157,9 @@ class CommitCommand :
                 issues,
             )
 
-        // Display the commit message
         echo("\nGenerated Commit Message:")
         echo(commitMessage)
 
-        // Confirm and commit
         if (promptYesNo("\nDo you want to commit with this message?", defaultNo = false)) {
             commitChanges(commitMessage)
         } else {
@@ -226,28 +220,27 @@ class CommitCommand :
      * @return An empty string if empty scopes are allowed, otherwise exits the process.
      */
     private fun handleEmptyScopes(): String =
-        if (!allowCustomScopes) {
-            if (!allowEmptyScopes) {
+        when {
+            !allowCustomScopes && !allowEmptyScopes -> {
                 echo("No scopes available and empty disabled. Exiting.")
                 exitProcess(1)
-            } else {
-                ""
             }
-        } else {
-            promptForInput("Enter scope")
+            !allowCustomScopes -> ""
+            else -> promptForInput("Enter scope")
         }
 
     /**
      * Builds the list of scope options for the user to select from.
      * @return The list of scope options.
      */
-    private fun buildScopeOptions(type: String): List<String> =
-        (scopes[type] ?: scopes["all"] ?: emptyList())
-            .let {
-                if (allowCustomScopes) it + "Other (custom scope)" else it
-            }.let {
-                if (allowEmptyScopes) it + "None (empty scope)" else it
-            }
+    private fun buildScopeOptions(type: String): List<String> {
+        val baseScopes = scopes[type] ?: scopes["all"] ?: emptyList()
+        return baseScopes +
+            listOfNotNull(
+                if (allowCustomScopes) "Other (custom scope)" else null,
+                if (allowEmptyScopes) "None (empty scope)" else null,
+            )
+    }
 
     /**
      * Handles the user's scope selection.
@@ -280,25 +273,13 @@ class CommitCommand :
      * @return The entered longer description.
      */
     private fun promptForLongDescription(): String {
-        val useLongDesc = promptYesNo("Do you want to add a longer description?")
-        if (!useLongDesc) return ""
+        if (!promptYesNo("Do you want to add a longer description?")) return ""
 
         echo("\nEnter a longer description (press Enter twice when finished):")
-        val description = StringBuilder()
-        var line: String?
-        var emptyLineCount = 0
-
-        while (emptyLineCount < 1) {
-            line = readLine()
-            if (line?.trim()?.isEmpty() == true) {
-                emptyLineCount++
-            } else {
-                emptyLineCount = 0
-                description.append(line).append("\n")
-            }
-        }
-
-        return description.toString().trim()
+        return generateSequence { readLine() }
+            .takeWhile { it.isNotBlank() }
+            .joinToString("\n")
+            .trim()
     }
 
     /**
@@ -350,39 +331,15 @@ class CommitCommand :
         isBreaking: Boolean,
         breakingChanges: String,
         issues: String,
-    ): String {
-        val sb = StringBuilder()
+    ) = buildString {
+        append(type)
+        if (scope.isNotBlank()) append("($scope)")
+        if (isBreaking) append("!")
+        append(": $shortDescription")
 
-        // Header: <type>[(scope)][!]: <description>
-        sb.append(type)
-        if (scope.isNotBlank()) {
-            sb.append("(").append(scope).append(")")
-        }
-        if (isBreaking) {
-            sb.append("!")
-        }
-        sb.append(": ").append(shortDescription)
-
-        // Body
-        if (longDescription.isNotBlank()) {
-            sb.append("\n\n").append(longDescription)
-        }
-
-        // Breaking changes
-        if (isBreaking && breakingChanges.isNotBlank()) {
-            sb.append("\n\n$changesPrefix ").append(breakingChanges)
-        }
-
-        // Footer
-        if (issues.isNotBlank()) {
-            sb
-                .append("\n\n")
-                .append(issuePrefix)
-                .append(" ")
-                .append(issues)
-        }
-
-        return sb.toString()
+        if (longDescription.isNotBlank()) append("\n\n$longDescription")
+        if (isBreaking && breakingChanges.isNotBlank()) append("\n\n$changesPrefix $breakingChanges")
+        if (issues.isNotBlank()) append("\n\n$issuePrefix $issues")
     }
 
     /**
@@ -391,15 +348,16 @@ class CommitCommand :
      */
     private fun commitChanges(message: String) {
         try {
-            val process =
-                ProcessBuilder("git", "commit", "-m", message)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .start()
+            val process = git("commit", "-m", message)
 
             val exitCode = process.waitFor()
             if (exitCode == 0) {
                 echo("Commit created successfully!")
+
+                if (autoPush) {
+                    echo("Auto-pushing changes to remote...")
+                    PushCommand().run()
+                }
             } else {
                 echo("Failed to create commit. Exit code: $exitCode")
             }
@@ -414,11 +372,7 @@ class CommitCommand :
      */
     private fun hasStagedChanges(): Boolean =
         try {
-            val process =
-                ProcessBuilder("git", "diff", "--cached", "--name-only")
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .start()
+            val process = gitPipe("diff", "--cached", "--name-only")
 
             val output =
                 process.inputStream

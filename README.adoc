@@ -1,86 +1,113 @@
-= Kotlin Conventional Commit Generator
+= Kommit: Kotlin Conventional Commit Generator
+:toc: macro
+:toc-title: Table of Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: highlight.js
+:experimental:
 
-A simple command-line tool written in Kotlin that helps generate conventional commit messages based on a YAML-inspired configuration file, without external dependencies.
+image:https://github.com/OmyDaGreat/Kommit/actions/workflows/release.yml/badge.svg[Build Status,link=https://github.com/OmyDaGreat/Kommit/actions/workflows/release.yml]
+image:https://img.shields.io/github/v/release/OmyDaGreat/Kommit[Latest Release,link=https://github.com/OmyDaGreat/Kommit/releases/latest]
+image:https://img.shields.io/badge/license-MIT-blue[License,link=LICENSE]
 
-== Features
+A powerful command-line tool written in Kotlin that helps generate conventional commit messages based on a YAML-inspired configuration file. Kommit streamlines your Git workflow with interactive prompts and standardized commit formats.
 
-* Follows the link:https://www.conventionalcommits.org/[Conventional Commits] specification
-* Customizable commit types, scopes, and other options through a YAML-inspired configuration file
-* Interactive CLI prompts to guide you through creating well-formatted commits
-* Support for breaking changes and issue references
-* No external libraries required
+toc::[]
 
-== Installation
+== 🚀 Features
+
+* ✅ Follows the link:https://www.conventionalcommits.org/[Conventional Commits] specification
+* ⚙️ Customizable commit types, scopes, and other options through a YAML-inspired configuration file
+* 💬 Interactive CLI prompts to guide you through creating well-formatted commits
+* 🔄 Support for breaking changes and issue references
+* 🛠️ Comprehensive Git workflow commands (branch, pull, push, etc.)
+* 📝 Detailed commit history with formatted logs
+
+== 📥 Installation
 
 === Using Scoop (Windows)
 
-1. Add the Malefic bucket to Scoop:
-
-+
 [source,sh]
 ----
+# Add the Malefic bucket to Scoop
 scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
-----
 
-2. Install Kommit:
-
-
-+
-[source,sh]
-----
+# Install Kommit
 scoop install kommit
 ----
 
-== Usage
+=== Manual Installation
 
-1. Run the following command to create a default `.kommit.yaml` configuration file in your project root:
+1. Download the latest release from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]
+2. Extract the ZIP file to a directory of your choice
+3. Add the directory to your system PATH or create a symbolic link to the executable
 
-+
+== 🚦 Quick Start
+
 [source,sh]
 ----
+# Create a default configuration file
 kommit create
+
+# Generate a commit message interactively
+kommit
+
+# Or explicitly use the commit command
+kommit commit
 ----
 
-2. Run the script:
+== 📋 Usage Guide
 
-+
+=== Basic Workflow
+
+1. Stage your changes with Git or use `kommit stage`
+2. Run `kommit` to start the interactive commit process
+3. Follow the prompts to select commit type, scope, and description
+4. Review and confirm your commit message
+
+=== Command Reference
+
+Kommit provides several subcommands to perform various Git-related tasks:
+
+==== Commit Management
+* `commit`: Generate a conventional commit message interactively
+* `amend`: Amend the last commit with a new message or staged changes
+* `log`: Display a formatted log of commits
+
+==== Branch Management
+* `branch`: Manage Git branches (create, checkout, merge, etc.)
+
+==== Repository Management
+* `init`: Initialize a new Git repository
+* `pull`: Pull changes from the remote repository
+* `push`: Push changes to the remote repository
+* `fetch`: Fetch changes from the remote repository
+
+==== File Management
+* `stage`: Stage files for a commit
+* `status`: Show the working tree status
+
+==== Tag Management
+* `tag`: Create or list Git tags
+
+==== Miscellaneous
+* `create`: Create a default `.kommit.yaml` configuration file in the project root
+* `reset-gpg`: Reset GPG signing configuration for commits
+
+TIP: Run `kommit --help` to see all available commands and options.
+
+== ⚙️ Configuration
+
+=== Configuration File Location
+
+By default, Kommit looks for a `.kommit.yaml` file in the current directory. You can specify a different configuration file using the `--config` option:
+
 [source,sh]
 ----
-kommit
+kommit --config path/to/config.yaml
 ----
 
-3. Follow the prompts to generate your commit message.
-
-== Subcommands
-
-Kommit provides several subcommands to perform various Git-related tasks. Below is a list of all available subcommands, grouped by functionality:
-
-=== Commit Management
-* `commit`: Generate a conventional commit message interactively.
-* `amend`: Amend the last commit with a new message or staged changes.
-* `log`: Display a formatted log of commits.
-
-=== Branch Management
-* `branch`: Manage Git branches (create, checkout, merge, etc.).
-
-=== Repository Management
-* `init`: Initialize a new Git repository.
-* `pull`: Pull changes from the remote repository.
-* `push`: Push changes to the remote repository.
-* `fetch`: Fetch changes from the remote repository.
-
-=== File Management
-* `stage`: Stage files for a commit.
-* `status`: Show the working tree status.
-
-=== Tag Management
-* `tag`: Create or list Git tags.
-
-=== Miscellaneous
-* `create`: Create a default `.kommit.yaml` configuration file in the project root.
-* `reset-gpg`: Reset GPG signing configuration for commits.
-
-== Configuration File Format
+=== Configuration File Format
 
 The configuration file uses a YAML-inspired format:
 
@@ -93,6 +120,13 @@ types:
   - feat: A new feature
   - fix: A bug fix
   - docs: Documentation only changes
+  - style: Changes that do not affect the meaning of the code
+  - refactor: A code change that neither fixes a bug nor adds a feature
+  - perf: A code change that improves performance
+  - test: Adding missing tests or correcting existing tests
+  - build: Changes that affect the build system or external dependencies
+  - ci: Changes to CI configuration files and scripts
+  - chore: Other changes that don't modify src or test files
 
 # Available Scopes
 scopes:
@@ -100,10 +134,12 @@ scopes:
     - core
     - ui
     - api
+    - auth
+    - db
   chore:
     - github
     - deps
-
+    - release
 
 # Configuration Options
 options:
@@ -122,21 +158,43 @@ options:
     - docs
 ----
 
-=== Configuration Options
-* `types`: List of commit types with their descriptions
-* `scopes`: List of available scopes
+=== Configuration Options Explained
 
-NOTE: It's not necessary to have all the options, but the following are available:
+[cols="1,3"]
+|===
+|Option |Description
 
-* `options.allowCustomScopes`: Whether to allow custom scopes (true/false)
-* `options.allowEmptyScopes`: Whether to allow empty scopes (true/false)
-* `options.issuePrefix`: The prefix used for issue references in the footer
-* `options.changesPrefix`: The prefix used for breaking changes in the footer
-* `options.remindToStageChanges`: Whether to remind the user to stage changes (true/false)
-* `options.allowBreakingChanges`: List of types that can have breaking changes
-* `options.allowIssues`: List of types that can have issue references
+|`types`
+|List of commit types with their descriptions. Each type follows the format `type: Description`.
 
-== Example Commit Message
+|`scopes`
+|List of available scopes. You can define scopes for all commit types under the `all` key, or specific scopes for particular commit types.
+
+|`options.allowCustomScopes`
+|Whether to allow custom scopes (true/false). When enabled, users can enter scopes not defined in the configuration.
+
+|`options.allowEmptyScopes`
+|Whether to allow empty scopes (true/false). When enabled, users can create commits without a scope.
+
+|`options.issuePrefix`
+|The prefix used for issue references in the footer.
+
+|`options.changesPrefix`
+|The prefix used for breaking changes in the footer.
+
+|`options.remindToStageChanges`
+|Whether to remind the user to stage changes (true/false). When enabled, Kommit will check if there are staged changes before creating a commit.
+
+|`options.allowBreakingChanges`
+|List of types that can have breaking changes. Only these types will prompt for breaking changes.
+
+|`options.allowIssues`
+|List of types that can have issue references. Only these types will prompt for issue references.
+|===
+
+== 📝 Example Commit Messages
+
+=== Feature with Breaking Change
 
 [source]
 ----
@@ -148,3 +206,58 @@ BREAKING CHANGES: Changes the API for button styling
 
 ISSUES CLOSED: #123, #456
 ----
+
+=== Bug Fix
+
+[source]
+----
+fix(auth): resolve login timeout issue
+
+Fixed the issue where users were being logged out after 5 minutes of inactivity.
+
+ISSUES CLOSED: #789
+----
+
+=== Documentation Update
+
+[source]
+----
+docs: update installation instructions
+
+Updated the README with more detailed installation instructions for different platforms.
+----
+
+== 🔧 Troubleshooting
+
+=== Common Issues
+
+==== Git Not Found
+
+If you see an error like "Git command not found", ensure that Git is installed and available in your system PATH.
+
+==== Configuration File Not Found
+
+If Kommit can't find your configuration file, make sure it exists at the expected location, specify the path using the `--config` option, or create it with `kommit create`.
+
+=== Getting Help
+
+If you encounter any issues not covered here, please:
+
+1. Check the link:https://github.com/OmyDaGreat/Kommit/issues[GitHub Issues] to see if it's a known problem
+2. Open a new issue if your problem hasn't been reported
+
+== 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes using Kommit 😉 (`kommit`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please make sure your code follows the project's coding style and includes appropriate tests.
+
+== 📄 License
+
+This project is licensed under the MIT License - see the link:LICENSE[LICENSE] file for details.

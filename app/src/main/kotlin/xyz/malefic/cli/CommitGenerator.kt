@@ -12,9 +12,5 @@ import com.github.ajalt.clikt.core.main
  */
 fun main(args: Array<String>) =
     Kommit().main(
-        if (args.isEmpty()) {
-            arrayOf("commit")
-        } else {
-            args
-        },
+        args.takeUnless { it.isEmpty() } ?: arrayOf("commit"),
     )

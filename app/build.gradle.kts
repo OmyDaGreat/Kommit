@@ -14,14 +14,6 @@ dependencies {
     implementation(libs.mordant)
 }
 
-testing {
-    suites {
-        val test by getting(JvmTestSuite::class) {
-            useKotlinTest("2.1.20")
-        }
-    }
-}
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)

@@ -6,15 +6,15 @@ import xyz.malefic.cli.cmd.commit.AmendCommand
 import xyz.malefic.cli.cmd.commit.CommitCommand
 import xyz.malefic.cli.cmd.commit.CreateConfigCommand
 import xyz.malefic.cli.cmd.commit.LogCommand
-import xyz.malefic.cli.cmd.misc.ResetGpgCommand
-import xyz.malefic.cli.cmd.system.BranchCommand
-import xyz.malefic.cli.cmd.system.FetchCommand
-import xyz.malefic.cli.cmd.system.InitCommand
-import xyz.malefic.cli.cmd.system.PullCommand
-import xyz.malefic.cli.cmd.system.PushCommand
-import xyz.malefic.cli.cmd.system.StageCommand
-import xyz.malefic.cli.cmd.system.StatusCommand
-import xyz.malefic.cli.cmd.system.TagCommand
+import xyz.malefic.cli.cmd.gitsys.BranchCommand
+import xyz.malefic.cli.cmd.gitsys.FetchCommand
+import xyz.malefic.cli.cmd.gitsys.InitCommand
+import xyz.malefic.cli.cmd.gitsys.PullCommand
+import xyz.malefic.cli.cmd.gitsys.PushCommand
+import xyz.malefic.cli.cmd.gitsys.StageCommand
+import xyz.malefic.cli.cmd.gitsys.StatusCommand
+import xyz.malefic.cli.cmd.gitsys.TagCommand
+import xyz.malefic.cli.cmd.gpg.GpgCommand
 
 internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
 
@@ -39,7 +39,7 @@ class Kommit :
             LogCommand(),
             PullCommand(),
             PushCommand(),
-            ResetGpgCommand(),
+            GpgCommand(),
             StageCommand(),
             StatusCommand(),
             TagCommand(),

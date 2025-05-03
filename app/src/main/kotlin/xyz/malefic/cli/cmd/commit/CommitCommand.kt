@@ -7,10 +7,11 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import org.yaml.snakeyaml.Yaml
 import xyz.malefic.cli.DEFAULT_CONFIG_PATH
-import xyz.malefic.cli.cmd.system.PushCommand
-import xyz.malefic.cli.cmd.system.stageAllFiles
-import xyz.malefic.cli.cmd.util.git
+import xyz.malefic.cli.cmd.gitsys.pushCommits
+import xyz.malefic.cli.cmd.gitsys.stageAllFiles
+import xyz.malefic.cli.cmd.gpg.resetGpgAgent
 import xyz.malefic.cli.cmd.util.gitPipe
+import xyz.malefic.cli.cmd.util.gitStream
 import xyz.malefic.cli.cmd.util.nullGet
 import java.io.File
 import kotlin.system.exitProcess
@@ -353,21 +354,39 @@ class CommitCommand :
     /**
      * Commits the changes using the generated commit message.
      * @param message The commit message.
+     * @param isRetry Whether this is a retry attempt after a GPG error.
      */
-    private fun commitChanges(message: String) {
+    private fun commitChanges(
+        message: String,
+        isRetry: Boolean = false,
+    ) {
         try {
-            val process = git("commit", "-m", message)
+            val process = gitStream("commit", "-m", message)
 
+            val output = process.inputStream.bufferedReader().readText()
             val exitCode = process.waitFor()
+
             if (exitCode == 0) {
                 echo("Commit created successfully!")
 
                 if (autoPush) {
                     echo("Auto-pushing changes to remote...")
-                    PushCommand().run()
+                    pushCommits()
                 }
             } else {
-                echo("Failed to create commit. Exit code: $exitCode")
+                val isGpgError = output.contains("gpg", ignoreCase = true)
+
+                if (isGpgError && !isRetry) {
+                    echo("GPG error detected. Attempting to reset GPG agent and retry...")
+                    resetGpgAgent()
+                    commitChanges(message, true)
+                } else {
+                    echo("Failed to create commit. Exit code: $exitCode")
+                    if (isRetry) {
+                        echo("GPG reset did not resolve the issue.")
+                    }
+                    echo("Error output: $output")
+                }
             }
         } catch (e: Exception) {
             echo("Error creating commit: ${e.message}")

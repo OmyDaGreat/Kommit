@@ -1,4 +1,4 @@
-package xyz.malefic.cli.cmd.system
+package xyz.malefic.cli.cmd.gitsys
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
@@ -26,24 +26,24 @@ class PushCommand :
      * Executes the command to push commits.
      */
     override fun run() {
-        echo(brightBlue("Pushing commits to remote..."))
         pushCommits()
     }
-
-    /**
-     * Pushes commits to the remote repository.
-     * Executes 'git push'.
-     */
-    private fun pushCommits() =
-        try {
-            val pushProcess = git("push")
-
-            val exitCode = pushProcess.waitFor()
-            when (exitCode) {
-                0 -> echo(green("Commits pushed successfully!"))
-                else -> echo(red("Failed to push commits. Exit code: $exitCode"), err = true)
-            }
-        } catch (e: Exception) {
-            echo(red("Error pushing commits: ${e.message}"), err = true)
-        }
 }
+
+/**
+ * Pushes commits to the remote repository.
+ * Executes 'git push'.
+ */
+fun CliktCommand.pushCommits() =
+    try {
+        echo(brightBlue("Pushing commits to remote..."))
+        val pushProcess = git("push")
+
+        val exitCode = pushProcess.waitFor()
+        when (exitCode) {
+            0 -> echo(green("Commits pushed successfully!"))
+            else -> echo(red("Failed to push commits. Exit code: $exitCode"), err = true)
+        }
+    } catch (e: Exception) {
+        echo(red("Error pushing commits: ${e.message}"), err = true)
+    }

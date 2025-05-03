@@ -90,9 +90,13 @@ Kommit provides several subcommands to perform various Git-related tasks:
 ==== Tag Management
 * `tag`: Create or list Git tags
 
+==== GPG Management
+* `gpg`: Parent command for GPG-related operations
+** `gpg test`: Test if the GPG agent is working by signing a test message
+** `gpg reset`: Reset the GPG agent to fix signing issues
+
 ==== Miscellaneous
 * `create`: Create a default `.kommit.yaml` configuration file in the project root
-* `reset-gpg`: Reset GPG signing configuration for commits
 
 TIP: Run `kommit --help` to see all available commands and options.
 

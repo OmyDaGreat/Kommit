@@ -1,4 +1,4 @@
-package xyz.malefic.cli.cmd.system
+package xyz.malefic.cli.cmd.gitsys
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context

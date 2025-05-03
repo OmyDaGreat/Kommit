@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import org.yaml.snakeyaml.Yaml
 import xyz.malefic.cli.DEFAULT_CONFIG_PATH
 import xyz.malefic.cli.cmd.system.PushCommand
+import xyz.malefic.cli.cmd.system.stageAllFiles
 import xyz.malefic.cli.cmd.util.git
 import xyz.malefic.cli.cmd.util.gitPipe
 import xyz.malefic.cli.cmd.util.nullGet
@@ -45,8 +46,9 @@ class CommitCommand :
     private var allowEmptyScopes = true
     private var issuePrefix = "ISSUES CLOSED:"
     private var changesPrefix = "BREAKING CHANGES:"
-    private var remindToStageChanges = true
-    private var autoPush = false
+    private var remindToStageChanges = false
+    private var autoStage = true
+    private var autoPush = true
 
     /**
      * Executes the command to load the configuration and generate the commit message.
@@ -106,7 +108,8 @@ class CommitCommand :
         allowEmptyScopes = options.nullGet("allowEmptyScopes", true) as Boolean
         issuePrefix = options.nullGet("issuePrefix", "ISSUES CLOSED:") as String
         changesPrefix = options.nullGet("changesPrefix", "BREAKING CHANGES:") as String
-        remindToStageChanges = options.nullGet("remindToStageChanges", true) as Boolean
+        remindToStageChanges = options.nullGet("remindToStageChanges", false) as Boolean
+        autoStage = options.nullGet("autoStage", true) as Boolean
         autoPush = options.nullGet("autoPush", true) as Boolean
         allowBreakingChanges.addAll(options.nullGet("allowBreakingChanges", emptyList<String>()) as List<String>)
         allowIssues.addAll(options.nullGet("allowIssues", emptyList<String>()) as List<String>)
@@ -120,8 +123,13 @@ class CommitCommand :
     private fun generateCommit() {
         echo("Generating conventional commit...")
 
-        if (remindToStageChanges && !hasStagedChanges()) {
-            echo("\nPlease stage your changes before kommiting!")
+        if (!hasStagedChanges()) {
+            if (autoStage) {
+                echo("\nAuto-staging changes...")
+                stageAllFiles()
+            } else if (remindToStageChanges) {
+                echo("\nPlease stage your changes before kommiting!")
+            }
         }
 
         val type = promptSelection("Select the type of change", types.map { "${it.value} - ${it.name}" })

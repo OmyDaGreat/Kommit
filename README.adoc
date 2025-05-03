@@ -143,14 +143,16 @@ scopes:
 
 # Configuration Options
 options:
-  allowCustomScopes: true
-  allowEmptyScopes: true
-  issuePrefix: "ISSUES CLOSED:"
-  changesPrefix: "BREAKING CHANGES:"
   remindToStageChanges: true
+  autoStage: false
   autoPush: true
-  allowBreakingChanges: []
-  allowIssues: []
+  allowBreakingChanges:
+    - feat
+    - fix
+    - refactor
+  allowIssues:
+    - feat
+    - fix
 ----
 
 === Configuration Options Explained
@@ -165,29 +167,29 @@ options:
 |`scopes`
 |List of available scopes. You can define scopes for all commit types under the `all` key, or specific scopes for particular commit types.
 
+|`options.allowBreakingChanges`
+|List of types that can have breaking changes. Only these types will prompt for breaking changes. By default, no commit types will prompt for breaking changes.
+
 |`options.allowCustomScopes`
 |Whether to allow custom scopes (true/false). When enabled, users can enter scopes not defined in the configuration. By default, users can enter custom scopes not defined in the configuration.
 
 |`options.allowEmptyScopes`
 |Whether to allow empty scopes (true/false). When enabled, users can create commits without a scope. By default, commits can be created without specifying a scope.
 
-|`options.issuePrefix`
-|The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
+|`options.autoPush`
+|Whether to automatically push changes after a successful commit (true/false). When enabled, Kommit will push your changes to the remote repository immediately after committing. By default, changes are automatically pushed after a successful commit.
+
+|`options.autoStage`
+|Whether to automatically stage all changes when no changes are staged (true/false). When enabled, Kommit will automatically stage all changes before creating a commit if no changes are staged. By default, changes are automatically staged.
 
 |`options.changesPrefix`
 |The prefix used for breaking changes in the footer. By default, breaking changes are prefixed with 'BREAKING CHANGES:' in the commit footer.
 
+|`options.issuePrefix`
+|The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
+
 |`options.remindToStageChanges`
-|Whether to remind the user to stage changes (true/false). When enabled, Kommit will check if there are staged changes before creating a commit. By default, Kommit will remind you to stage changes if none are staged.
-
-|`options.allowBreakingChanges`
-|List of types that can have breaking changes. Only these types will prompt for breaking changes. By default, no commit types will prompt for breaking changes.
-
-|`options.allowIssues`
-|List of types that can have issue references. Only these types will prompt for issue references. By default, no commit types will prompt for issue references.
-
-|`options.autoPush`
-|Whether to automatically push changes after a successful commit (true/false). When enabled, Kommit will push your changes to the remote repository immediately after committing. By default, changes are automatically pushed after a successful commit.
+|Whether to remind the user to stage changes (true/false). When enabled, Kommit will check if there are staged changes before creating a commit. By default, Kommit will not remind you to stage changes as a result of `autoStage` being enabled.
 |===
 
 == 📝 Example Commit Messages

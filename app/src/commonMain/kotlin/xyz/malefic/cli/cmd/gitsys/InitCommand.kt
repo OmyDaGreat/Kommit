@@ -2,6 +2,7 @@ package xyz.malefic.cli.cmd.gitsys
 
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.commit.CreateConfigCommand
+import xyz.malefic.cli.cmd.util.executeCommand
 
 /**
  * A command that initializes a Git repository with optional Kommit setup.
@@ -45,13 +46,21 @@ class InitCommand : BaseCommand() {
 
     /**
      * Initializes a Git repository by running the `git init` command.
-     *
-     * @throws Exception If an error occurs while executing the `git init` command.
      */
     private fun initRepo() {
         try {
-            // TODO: Implement native process execution for 'git init'
-            echo("Git repository initialized successfully!")
+            val result = executeCommand("git", "init")
+            if (result.exitCode == 0) {
+                echo("Git repository initialized successfully!")
+                if (result.output.isNotEmpty()) {
+                    echo(result.output)
+                }
+            } else {
+                echo("Failed to initialize Git repository. Exit code: ${result.exitCode}", err = true)
+                if (result.error.isNotEmpty()) {
+                    echo(result.error, err = true)
+                }
+            }
         } catch (e: Exception) {
             echo("Error initializing Git repository: ${e.message}", err = true)
         }

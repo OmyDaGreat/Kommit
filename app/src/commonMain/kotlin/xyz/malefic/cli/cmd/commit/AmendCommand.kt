@@ -1,6 +1,7 @@
 package xyz.malefic.cli.cmd.commit
 
 import xyz.malefic.cli.cmd.BaseCommand
+import xyz.malefic.cli.cmd.util.executeCommand
 
 /**
  * Command for amending the last commit.
@@ -33,8 +34,23 @@ class AmendCommand : BaseCommand() {
      */
     private fun amendCommit(noEdit: Boolean) {
         try {
-            // TODO: Implement native process execution for 'git commit --amend'
-            echo("Commit amended successfully!")
+            val command = mutableListOf("git", "commit", "--amend")
+            if (noEdit) {
+                command.add("--no-edit")
+            }
+
+            val result = executeCommand(*command.toTypedArray())
+            if (result.exitCode == 0) {
+                echo("Commit amended successfully!")
+                if (result.output.isNotEmpty()) {
+                    echo(result.output)
+                }
+            } else {
+                echo("Failed to amend commit. Exit code: ${result.exitCode}", err = true)
+                if (result.error.isNotEmpty()) {
+                    echo(result.error, err = true)
+                }
+            }
         } catch (e: Exception) {
             echo("Error amending commit: ${e.message}", err = true)
         }

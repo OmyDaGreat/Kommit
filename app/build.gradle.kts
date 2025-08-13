@@ -48,6 +48,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.core)
                 implementation(libs.kaml)
                 implementation(libs.kotlinx.io)
+                implementation(libs.kommand)
             }
         }
     }

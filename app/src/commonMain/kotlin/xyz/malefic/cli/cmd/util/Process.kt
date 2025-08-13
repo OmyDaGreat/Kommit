@@ -1,18 +1,13 @@
 package xyz.malefic.cli.cmd.util
 
-// Temporary implementation - will be replaced with kommand when working
+// Using platform-specific process execution for now
+// TODO: Replace with kommand library once API is properly researched
+
 /**
- * Cross-platform process execution utility - placeholder implementation
+ * Cross-platform process execution utility
+ * Currently using expect/actual pattern until kommand integration is complete
  */
-fun executeCommand(vararg command: String): ProcessResult {
-    return try {
-        // For now, return a mock result to get the build working
-        // TODO: Implement using kommand library once properly configured
-        ProcessResult(0, "Command executed successfully (placeholder)", "")
-    } catch (e: Exception) {
-        ProcessResult(1, "", e.message ?: "Unknown error")
-    }
-}
+expect fun executeCommand(vararg command: String): ProcessResult
 
 /**
  * Execute a git command with the specified arguments

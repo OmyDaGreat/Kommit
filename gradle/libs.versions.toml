@@ -4,12 +4,14 @@ kotter = "1.2.1"
 kotlinx-io = "0.6.0"
 kotlinx-serialization = "1.8.0"
 kaml = "0.67.0"
+kommand = "2.3.0"
 
 [libraries]
 kotter = { group = "com.varabyte.kotter", name = "kotter", version.ref = "kotter" }
 kotlinx-io = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
 kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 kaml = { group = "com.charleskorn.kaml", name = "kaml", version.ref = "kaml" }
+kommand = { group = "com.kgit2", name = "kommand", version.ref = "kommand" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

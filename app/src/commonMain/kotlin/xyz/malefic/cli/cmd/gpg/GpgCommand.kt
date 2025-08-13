@@ -11,7 +11,7 @@ class GpgCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         when (args[0]) {
             "test" -> TestGpgCommand().run(args.drop(1).toTypedArray())
             "reset" -> ResetGpgCommand().run(args.drop(1).toTypedArray())
@@ -21,7 +21,7 @@ class GpgCommand : BaseCommand() {
             }
         }
     }
-    
+
     override fun showHelp() {
         echo("GPG-related commands for managing and testing GPG signing")
         echo("")

@@ -11,21 +11,60 @@ package xyz.malefic.cli
 fun main(args: Array<String>) {
     val command = args.getOrNull(0) ?: "commit"
     val commandArgs = if (args.isNotEmpty()) args.drop(1).toTypedArray() else emptyArray()
-    
+
     when (command) {
-        "commit" -> xyz.malefic.cli.cmd.commit.CommitCommand().run(commandArgs)
-        "amend" -> xyz.malefic.cli.cmd.commit.AmendCommand().run(commandArgs)
-        "branch" -> xyz.malefic.cli.cmd.gitsys.BranchCommand().run(commandArgs)
-        "create" -> xyz.malefic.cli.cmd.commit.CreateConfigCommand().run(commandArgs)
-        "fetch" -> xyz.malefic.cli.cmd.gitsys.FetchCommand().run(commandArgs)
-        "init" -> xyz.malefic.cli.cmd.gitsys.InitCommand().run(commandArgs)
-        "log" -> xyz.malefic.cli.cmd.commit.LogCommand().run(commandArgs)
-        "pull" -> xyz.malefic.cli.cmd.gitsys.PullCommand().run(commandArgs)
-        "push" -> xyz.malefic.cli.cmd.gitsys.PushCommand().run(commandArgs)
-        "gpg" -> xyz.malefic.cli.cmd.gpg.GpgCommand().run(commandArgs)
-        "stage" -> xyz.malefic.cli.cmd.gitsys.StageCommand().run(commandArgs)
-        "status" -> xyz.malefic.cli.cmd.gitsys.StatusCommand().run(commandArgs)
-        "tag" -> xyz.malefic.cli.cmd.gitsys.TagCommand().run(commandArgs)
+        "commit" ->
+            xyz.malefic.cli.cmd.commit
+                .CommitCommand()
+                .run(commandArgs)
+        "amend" ->
+            xyz.malefic.cli.cmd.commit
+                .AmendCommand()
+                .run(commandArgs)
+        "branch" ->
+            xyz.malefic.cli.cmd.gitsys
+                .BranchCommand()
+                .run(commandArgs)
+        "create" ->
+            xyz.malefic.cli.cmd.commit
+                .CreateConfigCommand()
+                .run(commandArgs)
+        "fetch" ->
+            xyz.malefic.cli.cmd.gitsys
+                .FetchCommand()
+                .run(commandArgs)
+        "init" ->
+            xyz.malefic.cli.cmd.gitsys
+                .InitCommand()
+                .run(commandArgs)
+        "log" ->
+            xyz.malefic.cli.cmd.commit
+                .LogCommand()
+                .run(commandArgs)
+        "pull" ->
+            xyz.malefic.cli.cmd.gitsys
+                .PullCommand()
+                .run(commandArgs)
+        "push" ->
+            xyz.malefic.cli.cmd.gitsys
+                .PushCommand()
+                .run(commandArgs)
+        "gpg" ->
+            xyz.malefic.cli.cmd.gpg
+                .GpgCommand()
+                .run(commandArgs)
+        "stage" ->
+            xyz.malefic.cli.cmd.gitsys
+                .StageCommand()
+                .run(commandArgs)
+        "status" ->
+            xyz.malefic.cli.cmd.gitsys
+                .StatusCommand()
+                .run(commandArgs)
+        "tag" ->
+            xyz.malefic.cli.cmd.gitsys
+                .TagCommand()
+                .run(commandArgs)
         "help", "--help", "-h" -> showHelp()
         else -> {
             println("Unknown command: $command")

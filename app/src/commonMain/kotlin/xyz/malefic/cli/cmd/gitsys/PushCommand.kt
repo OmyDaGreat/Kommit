@@ -12,17 +12,17 @@ class PushCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         val force = args.contains("-f") || args.contains("--force")
         val setUpstream = args.contains("-u") || args.contains("--set-upstream")
-        
+
         val nonFlagArgs = args.filter { !it.startsWith("-") }
         val remote = nonFlagArgs.getOrNull(0)
         val branch = nonFlagArgs.getOrNull(1)
-        
+
         pushCommits(remote, branch, force, setUpstream)
     }
-    
+
     override fun showHelp() {
         echo("Push commits to the remote repository")
         echo("")
@@ -43,24 +43,29 @@ class PushCommand : BaseCommand() {
         echo("  kommit push -u origin feature  # Push and set upstream")
     }
 
-    private fun pushCommits(remote: String?, branch: String?, force: Boolean = false, setUpstream: Boolean = false) {
+    private fun pushCommits(
+        remote: String?,
+        branch: String?,
+        force: Boolean = false,
+        setUpstream: Boolean = false,
+    ) {
         try {
             val command = mutableListOf("push")
-            
+
             if (force) {
                 command.add("--force")
             }
-            
+
             if (setUpstream) {
                 command.add("--set-upstream")
             }
-            
+
             remote?.let { command.add(it) }
             branch?.let { command.add(it) }
-            
+
             echo("Pushing commits...")
             val result = git(*command.toTypedArray())
-            
+
             if (result.exitCode == 0) {
                 echo("Push completed successfully!")
                 if (result.output.isNotEmpty()) {

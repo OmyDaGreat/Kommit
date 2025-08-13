@@ -12,11 +12,11 @@ class StatusCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         echo("Checking git status...")
         showStatus()
     }
-    
+
     override fun showHelp() {
         echo("Show the working tree status")
         echo("")
@@ -32,7 +32,7 @@ class StatusCommand : BaseCommand() {
     private fun showStatus() {
         try {
             val result = git("status")
-            
+
             if (result.exitCode == 0) {
                 if (result.output.isNotEmpty()) {
                     echo(result.output)

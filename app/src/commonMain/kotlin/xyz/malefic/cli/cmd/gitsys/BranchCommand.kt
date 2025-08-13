@@ -12,7 +12,7 @@ class BranchCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         when {
             args.isEmpty() -> listBranches()
             args[0] == "-a" || args[0] == "--all" -> listBranches(showAll = true)
@@ -36,7 +36,7 @@ class BranchCommand : BaseCommand() {
             else -> checkoutBranch(args[0])
         }
     }
-    
+
     override fun showHelp() {
         echo("Manage Git branches")
         echo("")
@@ -61,7 +61,7 @@ class BranchCommand : BaseCommand() {
         try {
             val command = if (showAll) arrayOf("branch", "-a") else arrayOf("branch")
             val result = git(*command)
-            
+
             if (result.exitCode == 0) {
                 if (result.output.isEmpty()) {
                     echo("No branches found")
@@ -80,14 +80,18 @@ class BranchCommand : BaseCommand() {
         }
     }
 
-    private fun createBranch(branchName: String, checkout: Boolean = false) {
+    private fun createBranch(
+        branchName: String,
+        checkout: Boolean = false,
+    ) {
         try {
-            val result = if (checkout) {
-                git("checkout", "-b", branchName)
-            } else {
-                git("branch", branchName)
-            }
-            
+            val result =
+                if (checkout) {
+                    git("checkout", "-b", branchName)
+                } else {
+                    git("branch", branchName)
+                }
+
             if (result.exitCode == 0) {
                 val action = if (checkout) "created and checked out" else "created"
                 echo("Branch '$branchName' $action successfully!")
@@ -108,7 +112,7 @@ class BranchCommand : BaseCommand() {
     private fun deleteBranch(branchName: String) {
         try {
             val result = git("branch", "-d", branchName)
-            
+
             if (result.exitCode == 0) {
                 echo("Branch '$branchName' deleted successfully!")
                 if (result.output.isNotEmpty()) {
@@ -128,7 +132,7 @@ class BranchCommand : BaseCommand() {
     private fun checkoutBranch(branchName: String) {
         try {
             val result = git("checkout", branchName)
-            
+
             if (result.exitCode == 0) {
                 echo("Switched to branch '$branchName'")
                 if (result.output.isNotEmpty()) {

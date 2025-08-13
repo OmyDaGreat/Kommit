@@ -12,7 +12,7 @@ class TagCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         when {
             args.isEmpty() -> listTags()
             args[0] == "-d" || args[0] == "--delete" -> {
@@ -30,16 +30,19 @@ class TagCommand : BaseCommand() {
             }
             else -> {
                 val tagName = args[0]
-                val message = args.indexOfFirst { it == "-m" || it == "--message" }.let { index ->
-                    if (index >= 0 && index + 1 < args.size) {
-                        args[index + 1]
-                    } else null
-                }
+                val message =
+                    args.indexOfFirst { it == "-m" || it == "--message" }.let { index ->
+                        if (index >= 0 && index + 1 < args.size) {
+                            args[index + 1]
+                        } else {
+                            null
+                        }
+                    }
                 createTag(tagName, message)
             }
         }
     }
-    
+
     override fun showHelp() {
         echo("Manage Git tags")
         echo("")
@@ -61,7 +64,7 @@ class TagCommand : BaseCommand() {
     private fun listTags() {
         try {
             val result = git("tag", "--list")
-            
+
             if (result.exitCode == 0) {
                 if (result.output.isEmpty()) {
                     echo("No tags found")
@@ -80,10 +83,13 @@ class TagCommand : BaseCommand() {
         }
     }
 
-    private fun createTag(tagName: String, message: String?) {
+    private fun createTag(
+        tagName: String,
+        message: String?,
+    ) {
         try {
             val command = mutableListOf("tag")
-            
+
             message?.let {
                 command.add("-a")
                 command.add(tagName)
@@ -92,9 +98,9 @@ class TagCommand : BaseCommand() {
             } ?: run {
                 command.add(tagName)
             }
-            
+
             val result = git(*command.toTypedArray())
-            
+
             if (result.exitCode == 0) {
                 val tagType = if (message != null) "annotated tag" else "tag"
                 echo("$tagType '$tagName' created successfully!")
@@ -115,7 +121,7 @@ class TagCommand : BaseCommand() {
     private fun deleteTag(tagName: String) {
         try {
             val result = git("tag", "-d", tagName)
-            
+
             if (result.exitCode == 0) {
                 echo("Tag '$tagName' deleted successfully!")
                 if (result.output.isNotEmpty()) {

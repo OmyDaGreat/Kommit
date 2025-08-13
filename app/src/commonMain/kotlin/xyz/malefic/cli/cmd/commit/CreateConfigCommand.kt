@@ -1,21 +1,22 @@
 package xyz.malefic.cli.cmd.commit
 
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import xyz.malefic.cli.cmd.BaseCommand
 
 /**
  * Command for creating a default configuration file for Kommit.
  */
 class CreateConfigCommand : BaseCommand() {
-    
     override fun run(args: Array<String>) {
         if (args.contains("-h") || args.contains("--help")) {
             showHelp()
             return
         }
-        
+
         createConfigFile()
     }
-    
+
     override fun showHelp() {
         echo("Create a default configuration file for Kommit")
         echo("")
@@ -24,9 +25,10 @@ class CreateConfigCommand : BaseCommand() {
         echo("Options:")
         echo("  -h, --help      Show this help message")
     }
-    
+
     private fun createConfigFile() {
-        val configContent = """
+        val configContent =
+            """
 types:
   - fix: Bug fix
   - feat: New feature
@@ -57,11 +59,20 @@ options:
   remindToStageChanges: false
   autoStage: true
   autoPush: true
-        """.trimIndent()
-        
+            """.trimIndent()
+
         try {
-            // For now, just echo the config content
-            // TODO: Implement file writing for Kotlin/Native
+            if (
+                FileSystem.SYSTEM.read(".kommit.yaml".toPath()) {
+                    readUtf8()
+                } == ""
+            ) {
+                echo(".kommit.yaml already exists. Aborting to avoid overwrite.", err = true)
+                return
+            }
+            FileSystem.SYSTEM.write(".kommit.yaml".toPath()) {
+                writeUtf8(configContent)
+            }
             echo("Creating default .kommit.yaml config file...")
             echo("Config file created successfully!")
             echo("You can customize the configuration by editing .kommit.yaml")

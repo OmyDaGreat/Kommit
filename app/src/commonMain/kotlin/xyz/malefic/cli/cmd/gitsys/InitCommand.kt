@@ -19,12 +19,12 @@ class InitCommand : BaseCommand() {
      */
     override fun run(args: Array<String>) {
         val createConfig = args.contains("-c") || args.contains("--config")
-        
+
         if (args.contains("-h") || args.contains("--help")) {
             showHelp()
             return
         }
-        
+
         initRepo()
         if (createConfig) {
             createConfigFile()

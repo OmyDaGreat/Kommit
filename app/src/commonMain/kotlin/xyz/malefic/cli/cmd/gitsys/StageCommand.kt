@@ -12,10 +12,10 @@ class StageCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         val all = args.contains("-a") || args.contains("--all")
         val files = args.filter { !it.startsWith("-") }
-        
+
         when {
             all -> stageAllFiles()
             files.isNotEmpty() -> stageFiles(files)
@@ -25,7 +25,7 @@ class StageCommand : BaseCommand() {
             }
         }
     }
-    
+
     override fun showHelp() {
         echo("Stage files for commit (git add)")
         echo("")
@@ -43,7 +43,7 @@ class StageCommand : BaseCommand() {
     private fun stageAllFiles() {
         try {
             val result = git("add", ".")
-            
+
             if (result.exitCode == 0) {
                 echo("All files staged successfully!")
                 if (result.output.isNotEmpty()) {
@@ -63,7 +63,7 @@ class StageCommand : BaseCommand() {
     private fun stageFiles(files: List<String>) {
         try {
             val result = git("add", *files.toTypedArray())
-            
+
             if (result.exitCode == 0) {
                 echo("Files staged successfully: ${files.joinToString(", ")}")
                 if (result.output.isNotEmpty()) {

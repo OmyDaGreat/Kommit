@@ -9,15 +9,15 @@ import xyz.malefic.cli.cmd.util.executeCommand
 class AmendCommand : BaseCommand() {
     override fun run(args: Array<String>) {
         val noEdit = args.contains("--no-edit")
-        
+
         if (args.contains("-h") || args.contains("--help")) {
             showHelp()
             return
         }
-        
+
         amendCommit(noEdit)
     }
-    
+
     override fun showHelp() {
         echo("Amend the last commit")
         echo("")

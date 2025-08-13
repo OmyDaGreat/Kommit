@@ -12,11 +12,11 @@ class ResetGpgCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         echo("Resetting GPG agent...")
         resetGpgAgent()
     }
-    
+
     override fun showHelp() {
         echo("Reset the GPG agent to fix signing issues")
         echo("")
@@ -35,7 +35,7 @@ class ResetGpgCommand : BaseCommand() {
         try {
             echo("Killing GPG agent...")
             val killResult = executeCommand("gpgconf", "--kill", "gpg-agent")
-            
+
             if (killResult.exitCode == 0) {
                 echo("GPG agent killed successfully")
             } else {
@@ -44,10 +44,10 @@ class ResetGpgCommand : BaseCommand() {
                     echo("Kill error: ${killResult.error}")
                 }
             }
-            
+
             echo("Starting new GPG agent...")
             val connectResult = executeCommand("gpg-connect-agent", "/bye")
-            
+
             if (connectResult.exitCode == 0) {
                 echo("GPG agent started successfully!")
                 echo("GPG agent reset complete.")
@@ -57,7 +57,6 @@ class ResetGpgCommand : BaseCommand() {
                     echo("Connect error: ${connectResult.error}", err = true)
                 }
             }
-            
         } catch (e: Exception) {
             echo("Error resetting GPG agent: ${e.message}", err = true)
         }

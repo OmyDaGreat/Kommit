@@ -12,18 +12,18 @@ class FetchCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         val all = args.contains("--all")
         val prune = args.contains("--prune")
         val tags = args.contains("--tags")
-        
+
         val nonFlagArgs = args.filter { !it.startsWith("-") }
         val remote = nonFlagArgs.getOrNull(0)
         val branch = nonFlagArgs.getOrNull(1)
-        
+
         fetchChanges(remote, branch, all, prune, tags)
     }
-    
+
     override fun showHelp() {
         echo("Fetch changes from the remote repository")
         echo("")
@@ -45,30 +45,36 @@ class FetchCommand : BaseCommand() {
         echo("  kommit fetch origin main        # Fetch main branch from origin")
     }
 
-    private fun fetchChanges(remote: String?, branch: String?, all: Boolean = false, prune: Boolean = false, tags: Boolean = false) {
+    private fun fetchChanges(
+        remote: String?,
+        branch: String?,
+        all: Boolean = false,
+        prune: Boolean = false,
+        tags: Boolean = false,
+    ) {
         try {
             val command = mutableListOf("fetch")
-            
+
             if (all) {
                 command.add("--all")
             }
-            
+
             if (prune) {
                 command.add("--prune")
             }
-            
+
             if (tags) {
                 command.add("--tags")
             }
-            
+
             if (!all) {
                 remote?.let { command.add(it) }
                 branch?.let { command.add(it) }
             }
-            
+
             echo("Fetching changes...")
             val result = git(*command.toTypedArray())
-            
+
             if (result.exitCode == 0) {
                 echo("Fetch completed successfully!")
                 if (result.output.isNotEmpty()) {

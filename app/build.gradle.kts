@@ -8,7 +8,6 @@ repositories {
 }
 
 kotlin {
-    // Configure native targets
     linuxX64 {
         binaries {
             executable {
@@ -16,7 +15,7 @@ kotlin {
             }
         }
     }
-    
+
     macosX64 {
         binaries {
             executable {
@@ -24,7 +23,7 @@ kotlin {
             }
         }
     }
-    
+
     macosArm64 {
         binaries {
             executable {
@@ -32,7 +31,7 @@ kotlin {
             }
         }
     }
-    
+
     mingwX64 {
         binaries {
             executable {
@@ -40,7 +39,7 @@ kotlin {
             }
         }
     }
-    
+
     sourceSets {
         commonMain {
             dependencies {
@@ -49,6 +48,7 @@ kotlin {
                 implementation(libs.kaml)
                 implementation(libs.kotlinx.io)
                 implementation(libs.kommand)
+                implementation(libs.okio)
             }
         }
     }

@@ -12,29 +12,35 @@ class LogCommand : BaseCommand() {
             showHelp()
             return
         }
-        
-        val count = args.indexOfFirst { it == "-n" || it == "--number" }.let { index ->
-            if (index >= 0 && index + 1 < args.size) {
-                args[index + 1].toIntOrNull() ?: 10
-            } else 10
-        }
-        
+
+        val count =
+            args.indexOfFirst { it == "-n" || it == "--number" }.let { index ->
+                if (index >= 0 && index + 1 < args.size) {
+                    args[index + 1].toIntOrNull() ?: 10
+                } else {
+                    10
+                }
+            }
+
         val pretty = args.contains("-p") || args.contains("--pretty")
         val changelog = args.contains("-c") || args.contains("--changelog")
-        
-        val outputFile = args.indexOfFirst { it == "-o" || it == "--output" }.let { index ->
-            if (index >= 0 && index + 1 < args.size) {
-                args[index + 1]
-            } else "CHANGELOG.md"
-        }
-        
+
+        val outputFile =
+            args.indexOfFirst { it == "-o" || it == "--output" }.let { index ->
+                if (index >= 0 && index + 1 < args.size) {
+                    args[index + 1]
+                } else {
+                    "CHANGELOG.md"
+                }
+            }
+
         if (changelog) {
             generateChangelog(outputFile)
         } else {
             showLog(count, pretty)
         }
     }
-    
+
     override fun showHelp() {
         echo("Display Git logs or generate a changelog")
         echo("")
@@ -51,7 +57,10 @@ class LogCommand : BaseCommand() {
     /**
      * Displays Git logs in the terminal.
      */
-    private fun showLog(count: Int, pretty: Boolean) {
+    private fun showLog(
+        count: Int,
+        pretty: Boolean,
+    ) {
         try {
             val command = mutableListOf("log", "-n", count.toString())
             if (pretty) {
@@ -60,7 +69,7 @@ class LogCommand : BaseCommand() {
             }
 
             val result = git(*command.toTypedArray())
-            
+
             if (result.exitCode == 0) {
                 if (result.output.isEmpty()) {
                     echo("No commits found.")
@@ -85,7 +94,7 @@ class LogCommand : BaseCommand() {
     private fun generateChangelog(outputFile: String) {
         try {
             val result = git("log", "--pretty=format:%s")
-            
+
             if (result.exitCode != 0) {
                 echo("Failed to get commit messages. Exit code: ${result.exitCode}", err = true)
                 if (result.error.isNotEmpty()) {
@@ -101,13 +110,12 @@ class LogCommand : BaseCommand() {
             }
 
             val changelog = buildChangelog(commits)
-            
+
             // For now, just display the changelog instead of writing to file
             // TODO: Implement file writing when kotlinx-io is properly configured
             echo("Generated changelog content:")
             echo(changelog)
             echo("Note: File writing will be implemented with proper kotlinx-io setup")
-            
         } catch (e: Exception) {
             echo("Error generating changelog: ${e.message}", err = true)
         }
@@ -116,41 +124,43 @@ class LogCommand : BaseCommand() {
     /**
      * Builds a changelog string from a list of commit messages.
      */
-    private fun buildChangelog(commits: List<String>): String = buildString {
-        appendLine("# Changelog")
-        appendLine()
-        appendLine("## Latest Changes")
-        appendLine()
+    private fun buildChangelog(commits: List<String>): String =
+        buildString {
+            appendLine("# Changelog")
+            appendLine()
+            appendLine("## Latest Changes")
+            appendLine()
 
-        val typeMap = mutableMapOf<String, MutableList<String>>()
-        val regex = Regex("^(\\w+)(\\(.*\\))?(!)?:(.+)$")
+            val typeMap = mutableMapOf<String, MutableList<String>>()
+            val regex = Regex("^(\\w+)(\\(.*\\))?(!)?:(.+)$")
 
-        commits.forEach { commit ->
-            regex.find(commit)?.apply {
-                val (type, _, _, description) = destructured
-                typeMap.getOrPut(type) { mutableListOf() }.add(description.trim())
-            }
-        }
-
-        typeMap.forEach { (type, messages) ->
-            val header = when (type) {
-                "feat" -> "Features"
-                "fix" -> "Bug Fixes"
-                "docs" -> "Documentation"
-                "style" -> "Styling"
-                "refactor" -> "Refactors"
-                "perf" -> "Performance"
-                "test" -> "Tests"
-                "build" -> "Build"
-                "ci" -> "CI"
-                "chore" -> "Chores"
-                else -> type.replaceFirstChar { it.uppercaseChar() }
+            commits.forEach { commit ->
+                regex.find(commit)?.apply {
+                    val (type, _, _, description) = destructured
+                    typeMap.getOrPut(type) { mutableListOf() }.add(description.trim())
+                }
             }
 
-            appendLine("### $header")
-            appendLine()
-            messages.forEach { message -> appendLine("- $message") }
-            appendLine()
+            typeMap.forEach { (type, messages) ->
+                val header =
+                    when (type) {
+                        "feat" -> "Features"
+                        "fix" -> "Bug Fixes"
+                        "docs" -> "Documentation"
+                        "style" -> "Styling"
+                        "refactor" -> "Refactors"
+                        "perf" -> "Performance"
+                        "test" -> "Tests"
+                        "build" -> "Build"
+                        "ci" -> "CI"
+                        "chore" -> "Chores"
+                        else -> type.replaceFirstChar { it.uppercaseChar() }
+                    }
+
+                appendLine("### $header")
+                appendLine()
+                messages.forEach { message -> appendLine("- $message") }
+                appendLine()
+            }
         }
-    }
 }

@@ -12,11 +12,11 @@ class TestGpgCommand : BaseCommand() {
             showHelp()
             return
         }
-        
+
         echo("Testing GPG agent...")
         testGpgAgent()
     }
-    
+
     override fun showHelp() {
         echo("Test if the GPG agent is working by signing a test message")
         echo("")
@@ -35,7 +35,7 @@ class TestGpgCommand : BaseCommand() {
         try {
             // First check if GPG is available
             val versionResult = executeCommand("gpg", "--version")
-            
+
             if (versionResult.exitCode != 0) {
                 echo("GPG is not available or not working properly", err = true)
                 if (versionResult.error.isNotEmpty()) {
@@ -43,14 +43,19 @@ class TestGpgCommand : BaseCommand() {
                 }
                 return
             }
-            
+
             echo("GPG is available")
             echo("Version info:")
-            echo(versionResult.output.lines().take(3).joinToString("\n"))
-            
+            echo(
+                versionResult.output
+                    .lines()
+                    .take(3)
+                    .joinToString("\n"),
+            )
+
             // Check for signing key
             val keyResult = executeCommand("gpg", "--list-secret-keys", "--keyid-format", "LONG")
-            
+
             if (keyResult.exitCode == 0 && keyResult.output.isNotEmpty()) {
                 echo("GPG secret keys found:")
                 echo(keyResult.output)
@@ -59,7 +64,6 @@ class TestGpgCommand : BaseCommand() {
                 echo("No GPG secret keys found. You may need to import or generate a GPG key.")
                 echo("Use 'gpg --gen-key' to generate a new key.")
             }
-            
         } catch (e: Exception) {
             echo("Error testing GPG agent: ${e.message}", err = true)
         }

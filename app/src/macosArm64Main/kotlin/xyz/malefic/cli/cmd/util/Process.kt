@@ -3,7 +3,7 @@ package xyz.malefic.cli.cmd.util
 import com.kgit2.kommand.process.Command
 
 /**
- * Linux-specific implementation of process execution using Kommand library
+ * macOS ARM64-specific implementation of process execution using Kommand library
  */
 actual fun executeCommand(vararg command: String): ProcessResult {
     return try {
@@ -11,7 +11,7 @@ actual fun executeCommand(vararg command: String): ProcessResult {
             return ProcessResult(1, "", "No command provided")
         }
         
-        // Use kommand API - try the basic pattern
+        // Use kommand API - same as Linux implementation
         val baseCommand = command[0]
         val args = command.drop(1)
         

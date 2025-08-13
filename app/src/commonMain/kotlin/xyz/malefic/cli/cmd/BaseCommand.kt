@@ -1,6 +1,11 @@
 package xyz.malefic.cli.cmd
 
 /**
+ * Platform-specific output function for proper stderr handling
+ */
+expect fun writeOutput(message: String, err: Boolean)
+
+/**
  * Base class for all commands in the Kommit CLI application.
  */
 abstract class BaseCommand {
@@ -12,11 +17,10 @@ abstract class BaseCommand {
     
     /**
      * Prints a message to the console.
+     * If err is true, writes to stderr, otherwise to stdout.
      */
     protected fun echo(message: String, err: Boolean = false) {
-        // For now, just use println. In a full implementation, we would use
-        // platform-specific error output for err=true
-        println(message)
+        writeOutput(message, err)
     }
     
     /**

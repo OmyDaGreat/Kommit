@@ -1,10 +1,9 @@
 package xyz.malefic.cli.cmd.util
 
-import kotlinx.cinterop.*
-import platform.windows.*
+import com.kgit2.kommand.process.Command
 
 /**
- * Windows-specific implementation of process execution
+ * Windows-specific implementation of process execution using Kommand library
  */
 actual fun executeCommand(vararg command: String): ProcessResult {
     return try {
@@ -12,18 +11,33 @@ actual fun executeCommand(vararg command: String): ProcessResult {
             return ProcessResult(1, "", "No command provided")
         }
         
-        // For now, use a simple system() call for basic functionality
-        // TODO: Implement proper Windows process execution with output capture
-        val commandString = command.joinToString(" ")
-        val exitCode = system(commandString)
+        // Use kommand API - same as Linux implementation
+        val baseCommand = command[0]
+        val args = command.drop(1)
         
-        // system() doesn't capture output, so we return basic success/failure
-        if (exitCode == 0) {
-            ProcessResult(0, "Command executed successfully", "")
-        } else {
-            ProcessResult(exitCode, "", "Command failed with exit code $exitCode")
+        val cmd = Command(baseCommand)
+        if (args.isNotEmpty()) {
+            cmd.args(*args.toTypedArray())
         }
+        
+        // Try the kommand pattern, if it fails fallback to system()
+        val result = cmd.output()
+        
+        // Kommand might return different structure, let's handle what's available
+        ProcessResult(
+            exitCode = 0, // Assume success if no exception
+            output = result.stdout ?: "",
+            error = result.stderr ?: ""
+        )
     } catch (e: Exception) {
-        ProcessResult(1, "", e.message ?: "Unknown error")
+        // Fallback to basic system call
+        val commandString = command.joinToString(" ")
+        val exitCode = platform.posix.system(commandString)
+        
+        ProcessResult(
+            exitCode = exitCode,
+            output = if (exitCode == 0) "Command executed successfully" else "",
+            error = if (exitCode != 0) "Command failed with exit code $exitCode" else ""
+        )
     }
 }

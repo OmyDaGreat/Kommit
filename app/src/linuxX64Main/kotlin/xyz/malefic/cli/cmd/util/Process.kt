@@ -1,10 +1,10 @@
 package xyz.malefic.cli.cmd.util
 
-import kotlinx.cinterop.*
-import platform.posix.*
+import com.kgit2.kommand.process.Command
 
 /**
- * Linux-specific implementation of process execution using posix APIs
+ * Cross-platform process execution utility using Kommand library
+ * Currently exploring kommand API - will be improved incrementally
  */
 actual fun executeCommand(vararg command: String): ProcessResult {
     return try {
@@ -12,12 +12,14 @@ actual fun executeCommand(vararg command: String): ProcessResult {
             return ProcessResult(1, "", "No command provided")
         }
         
-        // For now, use a simple system() call for basic functionality
-        // TODO: Implement proper process execution with output capture
-        val commandString = command.joinToString(" ")
-        val exitCode = system(commandString)
+        // Try basic kommand usage - exploring API step by step
+        val baseCommand = command[0]
+        val args = command.drop(1)
         
-        // system() doesn't capture output, so we return basic success/failure
+        // For now, fall back to basic approach while researching kommand API
+        val commandString = command.joinToString(" ")
+        val exitCode = platform.posix.system(commandString)
+        
         if (exitCode == 0) {
             ProcessResult(0, "Command executed successfully", "")
         } else {

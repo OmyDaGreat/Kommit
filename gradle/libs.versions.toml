@@ -1,7 +1,7 @@
 [versions]
 yaml = "2.4"
 shadow = "8.1.1"
-kotlin = "2.2.0"
+kotlin = "2.2.10"
 clikt = "5.0.3"
 mordant = "3.0.2"
 

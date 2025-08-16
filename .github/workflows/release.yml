@@ -19,12 +19,15 @@ on:
           - minor
           - major
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
-    
     strategy:
       matrix:
         include:
@@ -50,68 +53,43 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
       - name: Setup Kotlin
         uses: fwilhe2/setup-kotlin@v1
         with:
           version: '2.2.0'
-
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-
       - name: Determine Version
         id: version
         run: |
-          # Get the latest tag or default to 0.1.0 if no tags exist
           git fetch --tags
           latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
-
           if [ -z "$latest_tag" ]; then
             latest_version="0.1.0"
           else
             latest_version="${latest_tag#v}"
           fi
-
-          # Split version into major, minor, patch
           IFS='.' read -r major minor patch <<< "$latest_version"
-
-          # Bump version based on input or default to patch
           bump_type="${{ github.event.inputs.version_bump || 'patch' }}"
-
           if [ "$bump_type" == "major" ]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
+            major=$((major + 1)); minor=0; patch=0
           elif [ "$bump_type" == "minor" ]; then
-            minor=$((minor + 1))
-            patch=0
+            minor=$((minor + 1)); patch=0
           else
             patch=$((patch + 1))
           fi
-
           new_version="$major.$minor.$patch"
-          echo "New version: $new_version"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "tag=v$new_version" >> $GITHUB_OUTPUT
-
-      - name: Get latest commit message
-        id: commit_message
-        run: |
-          latest_commit_message=$(git log -1 --pretty=format:%s)
-          echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
-
       - name: Make Gradlew executable
         run: chmod +x gradlew
-
       - name: Build Native Binary
         run: ./gradlew :app:linkReleaseExecutable${{ matrix.target }}
-
       - name: Prepare Binary
         run: |
           mkdir -p dist
           cp app/build/bin/${{ matrix.target }}/releaseExecutable/${{ matrix.executable }} dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
-          
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -125,15 +103,14 @@ jobs:
     permissions:
       contents: write
     if: github.ref == 'refs/heads/main'
-    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
 

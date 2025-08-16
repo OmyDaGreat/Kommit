@@ -1,15 +1,20 @@
 [versions]
-yaml = "2.4"
-shadow = "8.1.1"
-kotlin = "2.2.10"
-clikt = "5.0.3"
-mordant = "3.0.2"
+kotlin = "2.2.0"
+kotter = "1.2.1"
+kotlinx-io = "0.6.0"
+kotlinx-serialization = "1.8.0"
+kaml = "0.67.0"
+kommand = "2.3.0"
+okio = "3.16.0"
 
 [libraries]
-yaml = { group = "org.yaml", name = "snakeyaml", version.ref = "yaml" }
-clikt = { group = "com.github.ajalt.clikt", name = "clikt", version.ref = "clikt" }
-mordant = { group = "com.github.ajalt.mordant", name = "mordant", version.ref = "mordant" }
+kotter = { group = "com.varabyte.kotter", name = "kotter", version.ref = "kotter" }
+kotlinx-io = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
+kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+kaml = { group = "com.charleskorn.kaml", name = "kaml", version.ref = "kaml" }
+kommand = { group = "com.kgit2", name = "kommand", version.ref = "kommand" }
+okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 
 [plugins]
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

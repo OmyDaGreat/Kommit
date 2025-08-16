@@ -1,33 +1,55 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.shadow)
-    application
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation(libs.yaml)
-    implementation(libs.clikt)
-    implementation(libs.mordant)
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+kotlin {
+    linuxX64 {
+        binaries {
+            executable {
+                entryPoint = "xyz.malefic.cli.main"
+            }
+        }
     }
-}
 
-tasks {
-    shadowJar {
-        archiveBaseName.set("kommit")
-        archiveClassifier.set("")
-        archiveVersion.set("")
+    macosX64 {
+        binaries {
+            executable {
+                entryPoint = "xyz.malefic.cli.main"
+            }
+        }
     }
-}
 
-application {
-    mainClass = "xyz.malefic.cli.CommitGeneratorKt"
+    macosArm64 {
+        binaries {
+            executable {
+                entryPoint = "xyz.malefic.cli.main"
+            }
+        }
+    }
+
+    mingwX64 {
+        binaries {
+            executable {
+                entryPoint = "xyz.malefic.cli.main"
+            }
+        }
+    }
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation(libs.kotter)
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kaml)
+                implementation(libs.kotlinx.io)
+                implementation(libs.kommand)
+                implementation(libs.okio)
+            }
+        }
+    }
 }

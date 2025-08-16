@@ -1,5 +1,9 @@
 package xyz.malefic.cli.cmd.commit
 
+import com.charleskorn.kaml.Yaml
+import kotlinx.serialization.Serializable
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.util.executeCommand
 
@@ -43,22 +47,26 @@ class CommitCommand : BaseCommand() {
         }
     }
 
+    @Serializable
+    data class KommitConfig(
+        val types: List<String> = emptyList(),
+        val scopes: Map<String, List<String>> = emptyMap(),
+    )
+
+    private fun parseConfig(configPath: String): KommitConfig {
+        val configContent = FileSystem.SYSTEM.read(configPath.toPath()) { readUtf8() }
+        return Yaml.default.decodeFromString(KommitConfig.serializer(), configContent)
+    }
+
     private fun generateCommit(configPath: String) {
         echo("Generating conventional commit...")
 
-        // For now, implement a simple interactive commit generator
-        // TODO: Add YAML configuration parsing once file I/O is implemented
-
+        val config = parseConfig(configPath)
         val types =
-            listOf(
-                "fix" to "Bug fix",
-                "feat" to "New feature",
-                "docs" to "Documentation changes",
-                "style" to "Code style changes",
-                "refactor" to "Code refactoring",
-                "test" to "Adding or modifying tests",
-                "chore" to "Maintenance tasks",
-            )
+            config.types.map {
+                val entry = it.split(":")
+                entry[0].trim() to (entry.getOrNull(1)?.trim() ?: "")
+            }
 
         echo("\nSelect the type of change:")
         types.forEachIndexed { index, (type, description) ->
@@ -67,26 +75,33 @@ class CommitCommand : BaseCommand() {
 
         print("Enter your choice (1-${types.size}): ")
         val choice = readLine()?.toIntOrNull()?.minus(1)
-
         if (choice == null || choice !in types.indices) {
             echo("Invalid selection.", err = true)
             return
         }
-
         val selectedType = types[choice].first
 
-        print("\nEnter a scope (optional, press Enter to skip): ")
-        val scope = readLine()?.trim() ?: ""
-
+        val scopes = config.scopes["all"] ?: emptyList()
+        var scope: String
+        if (scopes.isNotEmpty()) {
+            echo("\nSelect a scope:")
+            scopes.forEachIndexed { index, scope ->
+                echo("${index + 1}. $scope")
+            }
+            print("Enter your choice (1-${scopes.size}, or press Enter to skip): ")
+            val scopeChoice = readLine()?.toIntOrNull()?.minus(1)
+            scope = if (scopeChoice != null && scopeChoice in scopes.indices) scopes[scopeChoice] else ""
+        } else {
+            // fallback if no scopes
+            print("\nEnter a scope (optional, press Enter to skip): ")
+            scope = readLine()?.trim() ?: ""
+        }
         print("\nEnter a short description: ")
         val description = readLine()?.trim() ?: ""
-
         if (description.isEmpty()) {
             echo("Description cannot be empty.", err = true)
             return
         }
-
-        // Build commit message
         val commitMessage =
             buildString {
                 append(selectedType)
@@ -95,13 +110,10 @@ class CommitCommand : BaseCommand() {
                 }
                 append(": $description")
             }
-
         echo("\nGenerated Commit Message:")
         echo(commitMessage)
-
         print("\nDo you want to commit with this message? (y/N): ")
         val response = readLine()?.lowercase()
-
         if (response == "y" || response == "yes") {
             commitChanges(commitMessage)
         } else {

@@ -1,9 +1,9 @@
+@file:Suppress("ktlint:standard:filename")
+
 package xyz.malefic.cli.cmd.util
 
 import com.kgit2.kommand.process.Command
-
-// Using platform-specific process execution for now
-// TODO: Replace with kommand library once API is properly researched
+import com.kgit2.kommand.process.Stdio
 
 /**
  * Cross-platform process execution utility
@@ -15,7 +15,6 @@ fun executeCommand(vararg command: String): ProcessResult {
             return ProcessResult(1, "", "No command provided")
         }
 
-        // Use kommand API - same as Linux implementation
         val baseCommand = command[0]
         val args = command.drop(1)
 
@@ -24,17 +23,14 @@ fun executeCommand(vararg command: String): ProcessResult {
             cmd.args(*args.toTypedArray())
         }
 
-        // Try the kommand pattern, if it fails fallback to system()
-        val result = cmd.output()
+        val result = cmd.stdout(Stdio.Inherit).output()
 
-        // Kommand might return different structure, let's handle what's available
         ProcessResult(
-            exitCode = 0, // Assume success if no exception
+            exitCode = 0,
             output = result.stdout ?: "",
             error = result.stderr ?: "",
         )
-    } catch (e: Exception) {
-        // Fallback to basic system call
+    } catch (_: Exception) {
         val commandString = command.joinToString(" ")
         val exitCode = platform.posix.system(commandString)
 

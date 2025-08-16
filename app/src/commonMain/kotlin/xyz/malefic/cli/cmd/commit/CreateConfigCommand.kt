@@ -29,38 +29,21 @@ class CreateConfigCommand : BaseCommand() {
     private fun createConfigFile() {
         val configContent =
             """
-types:
-  - fix: Bug fix
-  - feat: New feature
-  - docs: Documentation changes
-  - style: Code style changes
-  - refactor: Code refactoring
-  - test: Adding or modifying tests
-  - chore: Maintenance tasks
-
-scopes:
-  all:
-    - cli
-    - config
-    - build
-    - ci
-
-options:
-  allowCustomScopes: true
-  allowEmptyScopes: true
-  allowBreakingChanges:
-    - feat
-    - fix
-  allowIssues:
-    - feat
-    - fix
-  issuePrefix: "ISSUES CLOSED:"
-  changesPrefix: "BREAKING CHANGES:"
-  remindToStageChanges: false
-  autoStage: true
-  autoPush: true
+            # Simple Conventional Commit Configuration
+            
+            types:
+              - feat: A new feature
+              - fix: A bug fix
+              - docs: Documentation only changes
+              - refactor: A code change that neither fixes a bug nor adds a feature
+              - chore: Other changes that don't modify src or test files
+            
+            scopes:
+              all:
+                - core
+                - ui
+                - docs
             """.trimIndent()
-
         try {
             if (
                 FileSystem.SYSTEM.read(".kommit.yaml".toPath()) {
@@ -70,12 +53,13 @@ options:
                 echo(".kommit.yaml already exists. Aborting to avoid overwrite.", err = true)
                 return
             }
+            echo("Creating default .kommit.yaml config file...")
             FileSystem.SYSTEM.write(".kommit.yaml".toPath()) {
                 writeUtf8(configContent)
             }
-            echo("Creating default .kommit.yaml config file...")
             echo("Config file created successfully!")
             echo("You can customize the configuration by editing .kommit.yaml")
+            echo("The rules are available at https://github.com/OmyDaGreat/Kommit")
         } catch (e: Exception) {
             echo("Error creating config file: ${e.message}", err = true)
         }

@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.2.0"
+kotlin = "2.2.10"
 kotter = "1.2.1"
 kotlinx-io = "0.6.0"
 kotlinx-serialization = "1.8.0"

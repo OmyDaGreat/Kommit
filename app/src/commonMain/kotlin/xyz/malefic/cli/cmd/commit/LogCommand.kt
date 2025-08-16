@@ -1,5 +1,7 @@
 package xyz.malefic.cli.cmd.commit
 
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.util.git
 
@@ -111,11 +113,17 @@ class LogCommand : BaseCommand() {
 
             val changelog = buildChangelog(commits)
 
-            // For now, just display the changelog instead of writing to file
-            // TODO: Implement file writing when kotlinx-io is properly configured
-            echo("Generated changelog content:")
-            echo(changelog)
-            echo("Note: File writing will be implemented with proper kotlinx-io setup")
+            try {
+                val path = outputFile.toPath()
+                FileSystem.SYSTEM.write(path) {
+                    writeUtf8(changelog)
+                }
+                echo("Changelog written to $outputFile")
+            } catch (e: Exception) {
+                echo("Failed to write changelog to file: ${e.message}", err = true)
+                echo("Generated changelog content:")
+                echo(changelog)
+            }
         } catch (e: Exception) {
             echo("Error generating changelog: ${e.message}", err = true)
         }

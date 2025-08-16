@@ -7,7 +7,7 @@ import com.kgit2.kommand.process.Stdio
 
 /**
  * Cross-platform process execution utility
- * Currently using expect/actual pattern until kommand integration is complete
+ * Uses kommand library for proper stdout/stderr capture
  */
 fun executeCommand(vararg command: String): ProcessResult {
     return try {
@@ -23,22 +23,32 @@ fun executeCommand(vararg command: String): ProcessResult {
             cmd.args(*args.toTypedArray())
         }
 
-        val result = cmd.stdout(Stdio.Inherit).output()
+        // Use output() to capture stdout/stderr instead of inheriting
+        val result = cmd.output()
 
         ProcessResult(
-            exitCode = 0,
+            exitCode = 0, // Assume success if no exception thrown
             output = result.stdout ?: "",
             error = result.stderr ?: "",
         )
-    } catch (_: Exception) {
-        val commandString = command.joinToString(" ")
-        val exitCode = platform.posix.system(commandString)
-
-        ProcessResult(
-            exitCode = exitCode,
-            output = if (exitCode == 0) "Command executed successfully" else "",
-            error = if (exitCode != 0) "Command failed with exit code $exitCode" else "",
-        )
+    } catch (e: Exception) {
+        // Fallback to system call if kommand fails
+        try {
+            val commandString = command.joinToString(" ")
+            val exitCode = platform.posix.system(commandString)
+            
+            ProcessResult(
+                exitCode = exitCode,
+                output = if (exitCode == 0) "Command executed successfully" else "",
+                error = if (exitCode != 0) "Command failed with exit code $exitCode: ${e.message}" else "",
+            )
+        } catch (fallbackError: Exception) {
+            ProcessResult(
+                exitCode = 1,
+                output = "",
+                error = "Command execution failed: ${e.message}, fallback failed: ${fallbackError.message}",
+            )
+        }
     }
 }
 

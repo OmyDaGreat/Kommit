@@ -45,16 +45,16 @@ class CreateConfigCommand : BaseCommand() {
                 - docs
             """.trimIndent()
         try {
-            if (
-                FileSystem.SYSTEM.read(".kommit.yaml".toPath()) {
-                    readUtf8()
-                } == ""
-            ) {
+            val configPath = ".kommit.yaml".toPath()
+            
+            // Check if file already exists
+            if (FileSystem.SYSTEM.exists(configPath)) {
                 echo(".kommit.yaml already exists. Aborting to avoid overwrite.", err = true)
                 return
             }
+            
             echo("Creating default .kommit.yaml config file...")
-            FileSystem.SYSTEM.write(".kommit.yaml".toPath()) {
+            FileSystem.SYSTEM.write(configPath) {
                 writeUtf8(configContent)
             }
             echo("Config file created successfully!")

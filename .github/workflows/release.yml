@@ -11,19 +11,7 @@ on:
     inputs:
       version_bump:
         description: 'Version bump type'
-        required: true󰪢 1s 󰜥 󰉋    
-    brew upgrade
-==> Upgrading 1 outdated package:
-omydagreat/malefic/kommit 2.0.12 -> 64
-==> Fetching downloads for: kommit
-==> Fetching omydagreat/malefic/kommit
-==> Downloading https://github.com/OmyDaGreat/Kommit/releases/download/v3.0.1/kommit-linux-x64
-==> Downloading from https://release-assets.githubusercontent.com/github-production-release-asset/943540558/f5a56f21-bada-4779-80be-abd030b10c50?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-08-17T07%3A48%3A53
-###################################################################################################################################################################################################### 100.0%
-==> Upgrading omydagreat/malefic/kommit
-  2.0.12 -> 64 
-Error: An exception occurred within a child process:
-  TypeError: no implicit conversion of Array into String
+        required: true
         default: 'patch'
         type: choice
         options:

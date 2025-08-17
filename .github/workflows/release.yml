@@ -278,3 +278,76 @@ jobs:
           prerelease: false
           files: |
             release/*
+
+      - name: Create Scoop Manifest
+        run: |
+          cat > kommit.json << EOF
+          {
+              "version": "${{ steps.version.outputs.version }}",
+              "description": "A Kotlin-based conventional commit message generator",
+              "homepage": "https://github.com/OmyDaGreat/Kommit",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-windows-x64.exe",
+                      "hash": "${{ steps.checksums.outputs.windows_sha256 }}",
+                      "bin": [["kommit-windows-x64.exe", "kommit"]]
+                  }
+              },
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-windows-x64.exe"
+                      }
+                  }
+              }
+          }
+          EOF
+
+      - name: Update Scoop Bucket
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: OmyDaGreat/MaleficBucket
+          event-type: update-kommit
+          client-payload: '{"version": "${{ steps.version.outputs.version }}", "windows_sha256": "${{ steps.checksums.outputs.windows_sha256 }}", "tag": "${{ steps.version.outputs.tag }}"}'
+
+      - name: Update Homebrew Formula
+        run: |
+          git clone https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/OmyDaGreat/homebrew-malefic.git
+          cd homebrew-malefic
+          
+          # Create new formula for native binaries
+          cat > Formula/kommit.rb << 'EOF'
+          class Kommit < Formula
+            desc "A conventional commit generator made with Kotlin!"
+            homepage "https://github.com/OmyDaGreat/Kommit"
+            license "MIT"
+          
+            if OS.mac? && Hardware::CPU.arm?
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64"
+              sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
+            elsif OS.mac? && Hardware::CPU.intel?
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-x64"
+              sha256 "${{ steps.checksums.outputs.macos_x64_sha256 }}"
+            elsif OS.linux?
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64"
+              sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
+            end
+          
+            def install
+              bin.install Dir["*"] => "kommit"
+            end
+          
+            test do
+              system "#{bin}/kommit", "--help"
+            end
+          end
+          EOF
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kommit.rb
+          git commit -m "Update kommit formula to ${{ steps.version.outputs.version }} with native binaries"
+          git push

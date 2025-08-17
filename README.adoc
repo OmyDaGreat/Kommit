@@ -36,6 +36,17 @@ scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
 scoop install kommit
 ----
 
+=== Using Homebrew (macOS/Linux)
+
+[source,sh]
+----
+# Add the Malefic tap to Homebrew
+brew tap OmyDaGreat/malefic
+
+# Install Kommit
+brew install kommit
+----
+
 === Manual Installation
 
 1. Download the latest release from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]

@@ -11,7 +11,19 @@ on:
     inputs:
       version_bump:
         description: 'Version bump type'
-        required: true
+        required: true󰪢 1s 󰜥 󰉋    
+    brew upgrade
+==> Upgrading 1 outdated package:
+omydagreat/malefic/kommit 2.0.12 -> 64
+==> Fetching downloads for: kommit
+==> Fetching omydagreat/malefic/kommit
+==> Downloading https://github.com/OmyDaGreat/Kommit/releases/download/v3.0.1/kommit-linux-x64
+==> Downloading from https://release-assets.githubusercontent.com/github-production-release-asset/943540558/f5a56f21-bada-4779-80be-abd030b10c50?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-08-17T07%3A48%3A53
+###################################################################################################################################################################################################### 100.0%
+==> Upgrading omydagreat/malefic/kommit
+  2.0.12 -> 64 
+Error: An exception occurred within a child process:
+  TypeError: no implicit conversion of Array into String
         default: 'patch'
         type: choice
         options:
@@ -269,13 +281,13 @@ jobs:
             license "MIT"
           
             if OS.mac? && Hardware::CPU.arm?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-${{ steps.version.outputs.tag }}"
               sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
             elsif OS.mac? && Hardware::CPU.intel?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-x64"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-${{ steps.version.outputs.tag }}"
               sha256 "${{ steps.checksums.outputs.macos_x64_sha256 }}"
             elsif OS.linux?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-${{ steps.version.outputs.tag }}"
               sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
             end
           

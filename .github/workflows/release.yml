@@ -267,15 +267,16 @@ jobs:
             desc "A conventional commit generator made with Kotlin!"
             homepage "https://github.com/OmyDaGreat/Kommit"
             license "MIT"
+            version "${{ steps.version.outputs.tag }}"
           
             if OS.mac? && Hardware::CPU.arm?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-${{ steps.version.outputs.tag }}"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64"
               sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
             elsif OS.mac? && Hardware::CPU.intel?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-${{ steps.version.outputs.tag }}"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-x64"
               sha256 "${{ steps.checksums.outputs.macos_x64_sha256 }}"
             elsif OS.linux?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-${{ steps.version.outputs.tag }}"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64"
               sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
             end
           

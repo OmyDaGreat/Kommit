@@ -281,7 +281,13 @@ jobs:
             end
           
             def install
-              bin.install Dir["*"] => "kommit"
+              if OS.mac? && Hardware::CPU.arm?
+                bin.install "kommit-macos-arm64" => "kommit"
+              elsif OS.mac? && Hardware::CPU.intel?
+                bin.install "kommit-macos-x64" => "kommit"
+              elsif OS.linux?
+                bin.install "kommit-linux-x64" => "kommit"
+              end
             end
           
             test do

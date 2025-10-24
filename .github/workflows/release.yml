@@ -97,7 +97,7 @@ jobs:
           mkdir -p dist
           cp app/build/bin/${{ matrix.target }}/releaseExecutable/${{ matrix.executable }} dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
       - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
           path: dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}

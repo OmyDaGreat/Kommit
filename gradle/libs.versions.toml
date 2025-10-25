@@ -3,7 +3,7 @@ kotlin = "2.2.10"
 kotter = "1.2.1"
 kotlinx-io = "0.8.0"
 kotlinx-serialization = "1.9.0"
-kaml = "0.92.0"
+kaml = "0.102.0"
 kommand = "2.3.0"
 okio = "3.16.0"
 

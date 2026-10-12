@@ -36,10 +36,6 @@ jobs:
             executable: app.kexe
             artifact: kommit-linux-x64
           - os: macos-latest
-            target: macosX64
-            executable: app.kexe
-            artifact: kommit-macos-x64
-          - os: macos-latest
             target: macosArm64
             executable: app.kexe
             artifact: kommit-macos-arm64
@@ -193,7 +189,6 @@ jobs:
           
           # Copy binaries and rename them appropriately
           cp artifacts/kommit-linux-x64/kommit release/kommit-linux-x64
-          cp artifacts/kommit-macos-x64/kommit release/kommit-macos-x64
           cp artifacts/kommit-macos-arm64/kommit release/kommit-macos-arm64
           cp artifacts/kommit-windows-x64/kommit.exe release/kommit-windows-x64.exe
           
@@ -207,18 +202,15 @@ jobs:
         run: |
           cd release
           sha256sum kommit-linux-x64 > checksums.txt
-          sha256sum kommit-macos-x64 >> checksums.txt
           sha256sum kommit-macos-arm64 >> checksums.txt
           sha256sum kommit-windows-x64.exe >> checksums.txt
           
           # Get individual checksums for package managers
           linux_sha=$(sha256sum kommit-linux-x64 | awk '{print $1}')
-          macos_x64_sha=$(sha256sum kommit-macos-x64 | awk '{print $1}')
           macos_arm64_sha=$(sha256sum kommit-macos-arm64 | awk '{print $1}')
           windows_sha=$(sha256sum kommit-windows-x64.exe | awk '{print $1}')
           
           echo "linux_sha256=$linux_sha" >> $GITHUB_OUTPUT
-          echo "macos_x64_sha256=$macos_x64_sha" >> $GITHUB_OUTPUT
           echo "macos_arm64_sha256=$macos_arm64_sha" >> $GITHUB_OUTPUT
           echo "windows_sha256=$windows_sha" >> $GITHUB_OUTPUT
 
@@ -272,9 +264,6 @@ jobs:
             if OS.mac? && Hardware::CPU.arm?
               url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64"
               sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
-            elsif OS.mac? && Hardware::CPU.intel?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-x64"
-              sha256 "${{ steps.checksums.outputs.macos_x64_sha256 }}"
             elsif OS.linux?
               url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64"
               sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
@@ -283,8 +272,6 @@ jobs:
             def install
               if OS.mac? && Hardware::CPU.arm?
                 bin.install "kommit-macos-arm64" => "kommit"
-              elsif OS.mac? && Hardware::CPU.intel?
-                bin.install "kommit-macos-x64" => "kommit"
               elsif OS.linux?
                 bin.install "kommit-linux-x64" => "kommit"
               end
@@ -335,7 +322,6 @@ jobs:
             ### 📥 Direct Download
             Download the appropriate binary for your platform:
             - **Linux x64**: [kommit-linux-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64)
-            - **macOS x64**: [kommit-macos-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-x64)  
             - **macOS ARM64**: [kommit-macos-arm64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64)
             - **Windows x64**: [kommit-windows-x64.exe](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-windows-x64.exe)
 
@@ -344,7 +330,6 @@ jobs:
             ### 🔑 SHA256 Checksums
             ```
             Linux x64:   ${{ steps.checksums.outputs.linux_sha256 }}
-            macOS x64:   ${{ steps.checksums.outputs.macos_x64_sha256 }}
             macOS ARM64: ${{ steps.checksums.outputs.macos_arm64_sha256 }}
             Windows x64: ${{ steps.checksums.outputs.windows_sha256 }}
             ```

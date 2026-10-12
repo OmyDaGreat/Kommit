@@ -16,14 +16,6 @@ kotlin {
         }
     }
 
-    macosX64 {
-        binaries {
-            executable {
-                entryPoint = "xyz.malefic.cli.main"
-            }
-        }
-    }
-
     macosArm64 {
         binaries {
             executable {

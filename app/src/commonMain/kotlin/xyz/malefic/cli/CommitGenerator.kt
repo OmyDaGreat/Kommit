@@ -1,8 +1,12 @@
 package xyz.malefic.cli
 
 import com.varabyte.kotter.foundation.session
+import com.varabyte.kotter.foundation.text.bold
+import com.varabyte.kotter.foundation.text.textLine
+import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.commit.CommitCommand
 import xyz.malefic.cli.cmd.commit.CreateConfigCommand
+import xyz.malefic.cli.cmd.gpg.GpgCommand
 
 /**
  * The entry point of the application.
@@ -31,9 +35,9 @@ fun main(args: Array<String>) =
             }
 
             "gpg" -> {
-                xyz.malefic.cli.cmd.gpg
-                    .GpgCommand()
-                    .run(commandArgs)
+                with(GpgCommand()) {
+                    this@session.execute(commandArgs)
+                }
             }
 
             "help", "--help", "-h" -> {
@@ -47,14 +51,16 @@ fun main(args: Array<String>) =
         }
     }
 
-private fun showHelp() {
-    println("Kommit - A Kotlin-based conventional commit message generator")
-    println()
-    println("Usage: kommit [<options>] <command> [<args>]...")
-    println()
-    println("Commands:")
-    println("  commit  Generate a commit message")
-    println("  create  Create a default configuration file for Kommit")
-    println("  gpg     GPG-related commands for managing and testing GPG signing")
-    println("  help    Show this help message")
+private fun Session.showHelp() {
+    section {
+        bold { textLine("Kommit - A Kotlin-based conventional commit message generator") }
+        textLine()
+        textLine("Usage: kommit [<options>] <command> [<args>]...")
+        textLine()
+        textLine("Commands:")
+        textLine("  commit  Generate a commit message")
+        textLine("  create  Create a default configuration file for Kommit")
+        textLine("  gpg     GPG-related commands for managing and testing GPG signing")
+        textLine("  help    Show this help message")
+    }.run()
 }

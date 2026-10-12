@@ -32,13 +32,13 @@ class CommitCommand : BaseCommand() {
 
     override fun MainRenderScope.showHelp() {
         textLine("Generate a commit message")
-        textLine("")
+        textLine()
         textLine("Usage: kommit commit [options]")
-        textLine("")
+        textLine()
         textLine("Options:")
         textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
         textLine("  -h, --help          Show this help message")
-        textLine("")
+        textLine()
         textLine("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
     }
 

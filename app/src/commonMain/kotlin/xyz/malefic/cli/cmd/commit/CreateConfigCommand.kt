@@ -55,15 +55,15 @@ class CreateConfigCommand : BaseCommand() {
                 textLine("The rules are available at https://github.com/OmyDaGreat/Kommit")
             }.run()
         } catch (e: Exception) {
-            section { red { textLine("Error creating config file: ${e.message}") } }
+            section { red { textLine("Error creating config file: ${e.message}") } }.run()
         }
     }
 
     override fun MainRenderScope.showHelp() {
         textLine("Create a default configuration file for Kommit")
-        textLine("")
+        textLine()
         textLine("Usage: kommit create [options]")
-        textLine("")
+        textLine()
         textLine("Options:")
         textLine("  -h, --help      Show this help message")
     }

@@ -1,23 +1,8 @@
 package xyz.malefic.cli.cmd
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import platform.posix.fprintf
-import platform.posix.stderr
-
-/**
- * Platform-specific output function for proper stderr handling
- */
-@OptIn(ExperimentalForeignApi::class)
-fun writeOutput(
-    message: String,
-    err: Boolean,
-) {
-    if (err) {
-        fprintf(stderr, "%s\n", message)
-    } else {
-        println(message)
-    }
-}
+import com.varabyte.kotter.foundation.text.textLine
+import com.varabyte.kotter.runtime.MainRenderScope
+import com.varabyte.kotter.runtime.Session
 
 /**
  * Base class for all commands in the Kommit CLI application.
@@ -26,28 +11,34 @@ abstract class BaseCommand {
     /**
      * Executes the command with the given arguments.
      */
-    abstract fun run(args: Array<String>)
+    abstract fun Session.run(args: Array<String>)
 
     /**
-     * Prints a message to the console.
-     * If err is true, writes to stderr, otherwise to stdout.
+     * Helper function for Main, wrapping helpChecker w/ run
      */
-    protected fun echo(
-        message: String,
-        err: Boolean = false,
-    ) {
-        writeOutput(message, err)
+    fun Session.execute(args: Array<String>) {
+        if (helpChecker(args)) return
+        run(args)
     }
 
     /**
-     * Reads a line of input from the user.
+     * Checks for help arguments when executing.
      */
-    protected fun readLine(): String? = readlnOrNull()
+    fun Session.helpChecker(args: Array<String>): Boolean {
+        var help = false
+        section {
+            if (args.contains("-h") || args.contains("--help") || args.contains("help")) {
+                showHelp()
+                help = true
+            }
+        }.run()
+        return help
+    }
 
     /**
      * Shows help for the command.
      */
-    open fun showHelp() {
-        echo("No help available for this command.")
+    open fun MainRenderScope.showHelp() {
+        textLine("No help available for this command.")
     }
 }

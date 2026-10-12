@@ -1,71 +1,85 @@
 package xyz.malefic.cli.cmd.gpg
 
+import com.varabyte.kotter.foundation.liveVarOf
+import com.varabyte.kotter.foundation.text.green
+import com.varabyte.kotter.foundation.text.red
+import com.varabyte.kotter.foundation.text.textLine
+import com.varabyte.kotter.foundation.text.yellow
+import com.varabyte.kotter.runtime.MainRenderScope
+import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.BaseCommand
+import xyz.malefic.cli.cmd.util.ProcessResult
 import xyz.malefic.cli.cmd.util.executeCommand
 
 /**
  * Command for testing if the GPG agent is working.
  */
 class TestGpgCommand : BaseCommand() {
-    override fun run(args: Array<String>) {
-        if (args.contains("-h") || args.contains("--help")) {
-            showHelp()
-            return
-        }
-
-        echo("Testing GPG agent...")
+    override fun Session.run(args: Array<String>) {
+        section { yellow { textLine("Testing GPG agent...") } }.run()
         testGpgAgent()
     }
 
-    override fun showHelp() {
-        echo("Test if the GPG agent is working by signing a test message")
-        echo("")
-        echo("Usage: kommit gpg test [options]")
-        echo("")
-        echo("Options:")
-        echo("  -h, --help      Show this help message")
-        echo("")
-        echo("This command tests GPG signing by attempting to sign a test message.")
+    override fun MainRenderScope.showHelp() {
+        textLine("Test if the GPG agent is working by signing a test message")
+        textLine()
+        textLine("Usage: kommit gpg test [options]")
+        textLine()
+        textLine("Options:")
+        textLine("  -h, --help      Show this help message")
+        textLine()
+        textLine("This command tests GPG signing by attempting to sign a test message.")
     }
 
     /**
-     * Tests the GPG agent by running gpg --version and checking configuration.
+     * Tests the GPG agent for both its existence and any secret keys
      */
-    private fun testGpgAgent() {
+    private fun Session.testGpgAgent() {
         try {
-            // First check if GPG is available
             val versionResult = executeCommand("gpg", "--version")
 
             if (versionResult.exitCode != 0) {
-                echo("GPG is not available or not working properly", err = true)
-                if (versionResult.error.isNotEmpty()) {
-                    echo("Error: ${versionResult.error}", err = true)
-                }
+                section {
+                    red {
+                        textLine("GPG is not available or not working properly")
+                        if (versionResult.error.isNotEmpty()) {
+                            textLine("Error: ${versionResult.error}")
+                        }
+                    }
+                }.run()
                 return
             }
 
-            echo("GPG is available")
-            echo("Version info:")
-            echo(
-                versionResult.output
-                    .lines()
-                    .take(3)
-                    .joinToString("\n"),
-            )
+            section {
+                green { textLine("GPG is available") }
+                textLine("Version info:")
+                textLine(
+                    versionResult.output
+                        .lines()
+                        .take(3)
+                        .joinToString("\n"),
+                )
+            }.run()
 
-            // Check for signing key
-            val keyResult = executeCommand("gpg", "--list-secret-keys", "--keyid-format", "LONG")
-
-            if (keyResult.exitCode == 0 && keyResult.output.isNotEmpty()) {
-                echo("GPG secret keys found:")
-                echo(keyResult.output)
-                echo("GPG agent appears to be working correctly!")
-            } else {
-                echo("No GPG secret keys found. You may need to import or generate a GPG key.")
-                echo("Use 'gpg --gen-key' to generate a new key.")
+            var keyResult by liveVarOf<ProcessResult?>(null)
+            section {
+                keyResult?.let {
+                    if (it.exitCode == 0 && it.output.isNotEmpty()) {
+                        textLine("GPG secret keys found:")
+                        textLine(it.output)
+                        green { textLine("GPG agent appears to be working correctly!") }
+                    } else {
+                        yellow {
+                            textLine("No GPG secret keys found. You may need to import or generate a GPG key.")
+                            textLine("Use 'gpg --gen-key' to generate a new key.")
+                        }
+                    }
+                } ?: run {
+                    yellow { textLine("Checking for secret keys...") }
+                }
             }
         } catch (e: Exception) {
-            echo("Error testing GPG agent: ${e.message}", err = true)
+            section { red { ("Error testing GPG agent: ${e.message}") } }
         }
     }
 }

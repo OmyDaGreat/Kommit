@@ -20,8 +20,7 @@ toc::[]
 * ⚙️ Customizable commit types, scopes, and other options through a YAML-inspired configuration file
 * 💬 Interactive CLI prompts to guide you through creating well-formatted commits
 * 🔄 Support for breaking changes and issue references
-* 🛠️ Comprehensive Git workflow commands (branch, pull, push, etc.)
-* 📝 Detailed commit history with formatted logs
+* 🛠️ GPG tooling for Git commit signing
 
 == 📥 Installation
 
@@ -60,35 +59,18 @@ kommit commit
 
 === Basic Workflow
 
-1. Stage your changes with Git or use `kommit stage`
+1. Stage your changes with Git
 2. Run `kommit` to start the interactive commit process
 3. Follow the prompts to select commit type, scope, and description
 4. Review and confirm your commit message
 
 === Command Reference
 
-Kommit provides several subcommands to perform various Git-related tasks:
+Kommit provides subcommands for generating commits, managing configuration, and
+working with GPG signing:
 
 ==== Commit Management
 * `commit`: Generate a conventional commit message interactively
-* `amend`: Amend the last commit with a new message or staged changes
-* `log`: Display a formatted log of commits
-
-==== Branch Management
-* `branch`: Manage Git branches (create, checkout, merge, etc.)
-
-==== Repository Management
-* `init`: Initialize a new Git repository
-* `pull`: Pull changes from the remote repository
-* `push`: Push changes to the remote repository
-* `fetch`: Fetch changes from the remote repository
-
-==== File Management
-* `stage`: Stage files for a commit
-* `status`: Show the working tree status
-
-==== Tag Management
-* `tag`: Create or list Git tags
 
 ==== GPG Management
 * `gpg`: Parent command for GPG-related operations
@@ -255,9 +237,9 @@ If you encounter any issues not covered here, please:
 Contributions are welcome! Here's how you can help:
 
 1. Fork the repository
-2. Create a feature branch (`kommit checkout -b feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes using Kommit (`kommit`)
-4. Push to the branch (`kommit push origin feature/amazing-feature`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 Please make sure your code follows the project's coding style and includes appropriate tests.

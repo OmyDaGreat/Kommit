@@ -3,7 +3,6 @@
 package xyz.malefic.cli.cmd.util
 
 import com.kgit2.kommand.process.Command
-import com.kgit2.kommand.process.Stdio
 
 /**
  * Cross-platform process execution utility
@@ -36,7 +35,7 @@ fun executeCommand(vararg command: String): ProcessResult {
         try {
             val commandString = command.joinToString(" ")
             val exitCode = platform.posix.system(commandString)
-            
+
             ProcessResult(
                 exitCode = exitCode,
                 output = if (exitCode == 0) "Command executed successfully" else "",

@@ -5,48 +5,49 @@ import com.charleskorn.kaml.YamlList
 import com.charleskorn.kaml.YamlMap
 import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.YamlScalar
+import com.varabyte.kotter.foundation.input.input
+import com.varabyte.kotter.foundation.input.onInputEntered
+import com.varabyte.kotter.foundation.input.runUntilInputEntered
+import com.varabyte.kotter.foundation.liveVarOf
+import com.varabyte.kotter.foundation.text.green
+import com.varabyte.kotter.foundation.text.red
+import com.varabyte.kotter.foundation.text.text
+import com.varabyte.kotter.foundation.text.textLine
+import com.varabyte.kotter.foundation.text.yellow
+import com.varabyte.kotter.runtime.MainRenderScope
+import com.varabyte.kotter.runtime.Session
 import kotlinx.serialization.Serializable
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.util.executeCommand
+import xyz.malefic.cli.cmd.util.readInput
 
 internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
 
-/**
- * Enhanced CommitCommand supporting:
- *  - Map style type entries ( `- feat: A new feature` )
- *  - Plain string type entries ( `- feat` or `- "feat: A new feature"` )
- *  - Per-type scopes plus global scopes (`all` + specific type key)
- *  - Configuration options (breaking changes, issues, auto stage/push, etc.)
- *  - Helpful guidance when configuration file is missing
- */
 class CommitCommand : BaseCommand() {
-    override fun run(args: Array<String>) {
-        val configPath = extractConfigPath(args)
-
-        if (args.contains("-h") || args.contains("--help")) {
-            showHelp()
-            return
-        }
-
-        try {
-            generateCommit(configPath)
-        } catch (e: Exception) {
-            echo("Error: ${e.message}", err = true)
-        }
+    override fun Session.run(args: Array<String>) {
+        section {
+            if (args.contains("-h") || args.contains("--help")) {
+                showHelp()
+                return@section
+            }
+        }.run()
+        generateCommit(extractConfigPath(args))
     }
 
-    override fun showHelp() {
-        echo("Generate a commit message")
-        echo("")
-        echo("Usage: kommit commit [options]")
-        echo("")
-        echo("Options:")
-        echo("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
-        echo("  -h, --help          Show this help message")
-        echo("")
-        echo("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
+    override fun MainRenderScope.showHelp() {
+        green {
+            textLine("Generate a commit message")
+            textLine("")
+            textLine("Usage: kommit commit [options]")
+            textLine("")
+            textLine("Options:")
+            textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
+            textLine("  -h, --help          Show this help message")
+            textLine("")
+            textLine("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
+        }
     }
 
     private fun extractConfigPath(args: Array<String>): String {
@@ -78,7 +79,7 @@ class CommitCommand : BaseCommand() {
         val issuePrefix: String? = null,
     ) {
         companion object {
-            fun withDefaults(raw: KommitOptions?): ResolvedOptions {
+            fun withDefaults(raw: KommitOptions? = null): ResolvedOptions {
                 val r = raw ?: KommitOptions()
                 return ResolvedOptions(
                     remindToStageChanges = r.remindToStageChanges ?: false,
@@ -111,7 +112,13 @@ class CommitCommand : BaseCommand() {
         val types: List<TypeEntry>,
         val scopes: Map<String, List<String>>,
         val options: ResolvedOptions,
-    )
+    ) {
+        fun isEmpty() = this == empty
+
+        companion object {
+            val empty = KommitConfig(emptyList(), emptyMap(), KommitOptions.withDefaults())
+        }
+    }
 
     // ----- Parsing -----
 
@@ -154,6 +161,7 @@ class CommitCommand : BaseCommand() {
                         TypeEntry(raw)
                     }
                 }
+
                 is YamlMap -> {
                     val entry = item.entries.iterator().next()
                     val key = entry.key.content.trim()
@@ -164,7 +172,10 @@ class CommitCommand : BaseCommand() {
                         }
                     TypeEntry(key, desc)
                 }
-                else -> error("Value for 'types' is invalid: Expected a string or map.")
+
+                else -> {
+                    error("Value for 'types' is invalid: Expected a string or map.")
+                }
             }
         }
     }
@@ -179,11 +190,15 @@ class CommitCommand : BaseCommand() {
                 val key = kNode.content.trim()
                 val list =
                     when (vNode) {
-                        is YamlList ->
+                        is YamlList -> {
                             vNode.items.mapNotNull {
                                 (it as? YamlScalar)?.content?.trim()
                             }
-                        else -> error("Scope '$key' must be a list.")
+                        }
+
+                        else -> {
+                            error("Scope '$key' must be a list.")
+                        }
                     }
                 key to list
             }.toMap()
@@ -224,139 +239,163 @@ class CommitCommand : BaseCommand() {
 
     // ----- Commit Flow -----
 
-    private fun generateCommit(configPath: String) {
-        echo("Generating conventional commit...")
+    private fun Session.generateCommit(configPath: String) {
+        var error by liveVarOf(false)
 
-        val config = parseConfig(configPath)
+        section {
+            textLine("Generating conventional commit...")
+        }.run()
 
-        if (config.types.isEmpty()) {
-            echo("No commit types defined in configuration.", err = true)
-            return
+        var config by liveVarOf(KommitConfig.empty)
+        var configLoaded = false
+        section {
+            if (!configLoaded) {
+                yellow { textLine("Loading configuration from '$configPath'...") }
+            } else if (config.types.isEmpty()) {
+                red { textLine("No commit types defined in configuration.") }
+                error = true
+            } else {
+                green { textLine("Commit types loaded.") }
+            }
+        }.run {
+            config = parseConfig(configPath)
+            configLoaded = true
         }
+        if (error) return
 
         val options = config.options
-
-        // Optionally remind / auto-stage
-        if (options.remindToStageChanges || options.autoStage) {
-            val staged = getStagedFiles()
-            if (staged.isEmpty()) {
-                if (options.autoStage) {
-                    echo("No staged changes. Auto-staging all changes (configured)...")
-                    stageAll()
-                } else if (options.remindToStageChanges) {
-                    echo("No staged changes detected. Stage changes first (configure autoStage to stage automatically).", err = true)
+        section {
+            if (options.remindToStageChanges || options.autoStage) {
+                val staged = getStagedFiles()
+                if (staged.isEmpty()) {
+                    if (options.autoStage) {
+                        textLine("No staged changes. Auto-staging all changes (configured)...")
+                        stageAll { error = true }
+                    } else if (options.remindToStageChanges) {
+                        red { textLine("No staged changes detected. Stage changes first (configure autoStage to stage automatically).") }
+                        error = true
+                    }
                 }
             }
-        }
+        }.run()
+        if (error) return
 
-        // Present types
-        echo("\nSelect the type of change:")
-        config.types.forEachIndexed { index, entry ->
-            val line =
-                if (entry.description.isNotBlank()) {
-                    "${index + 1}. ${entry.type} - ${entry.description}"
-                } else {
-                    "${index + 1}. ${entry.type}"
-                }
-            echo(line)
-        }
+        val selectedType = readInput("\nSelect the type of change: ", *config.types.map { it.type }.toTypedArray())
 
-        print("Enter your choice (1-${config.types.size}): ")
-        val choice = readLine()?.toIntOrNull()?.minus(1)
-        if (choice == null || choice !in config.types.indices) {
-            echo("Invalid selection.", err = true)
-            return
-        }
-        val selectedType = config.types[choice].type
+        val availableScopes = (config.scopes["all"].orEmpty() + config.scopes[selectedType].orEmpty()).distinct()
 
-        // Determine scopes available: global 'all' + per-type if present
-        val availableScopes =
-            (config.scopes["all"].orEmpty() + config.scopes[selectedType].orEmpty())
-                .distinct()
-
-        val scope =
+        var scope by liveVarOf("")
+        var scopeInput by liveVarOf("")
+        section {
             if (availableScopes.isNotEmpty()) {
-                echo("\nSelect a scope:")
+                textLine("\nSelect a scope:")
                 availableScopes.forEachIndexed { index, s ->
-                    echo("${index + 1}. $s")
+                    textLine("${index + 1}. $s")
                 }
                 if (options.allowCustomScopes) {
-                    echo("${availableScopes.size + 1}. (Custom scope)")
+                    textLine("${availableScopes.size + 1}. (Custom scope)")
                 }
-                print(
+                textLine(
                     "Enter your choice (1-${availableScopes.size}${if (options.allowCustomScopes) ", or ${availableScopes.size + 1} for custom" else ""}${if (options.allowEmptyScopes) ", or press Enter to skip" else ""}): ",
                 )
+            } else if (options.allowEmptyScopes) {
+                textLine("\nEnter a scope (optional, press Enter to skip): ")
+            } else {
+                textLine("\nEnter a scope (required): ")
+            }
+            text("> ")
+            input()
+        }.runUntilInputEntered {
+            onInputEntered { scopeInput = input }
+        }
 
-                val scopeInput = readLine()
-                when {
-                    scopeInput.isNullOrBlank() && options.allowEmptyScopes -> ""
-                    scopeInput?.toIntOrNull() != null -> {
-                        val idx = scopeInput.toInt() - 1
-                        when {
-                            idx in availableScopes.indices -> availableScopes[idx]
-                            options.allowCustomScopes && idx == availableScopes.size -> {
-                                print("Enter custom scope: ")
-                                readLine()?.trim().orEmpty()
-                            }
-                            else -> {
-                                echo("Invalid scope selection.", err = true)
-                                return
-                            }
+        if (availableScopes.isNotEmpty()) {
+            when {
+                scopeInput.isBlank() && options.allowEmptyScopes -> {
+                    scope = ""
+                }
+
+                scopeInput.isBlank() -> {
+                    section {
+                        red { textLine("Empty scopes are disabled. Please enter a valid scope.") }
+                    }.run()
+                    return
+                }
+
+                scopeInput.toIntOrNull() != null -> {
+                    val idx = scopeInput.toInt() - 1
+                    when {
+                        idx in availableScopes.indices -> {
+                            scope = availableScopes[idx]
                         }
-                    }
-                    else -> {
-                        if (options.allowCustomScopes) {
-                            scopeInput!!.trim()
-                        } else {
-                            echo("Custom scopes are disabled. Invalid selection.", err = true)
+
+                        options.allowCustomScopes && idx == availableScopes.size -> {
+                            var customScope by liveVarOf("")
+                            section {
+                                textLine("Enter custom scope:")
+                                text("> ")
+                                input()
+                            }.runUntilInputEntered {
+                                onInputEntered { customScope = input }
+                            }
+                            scope = customScope.trim()
+                        }
+
+                        else -> {
+                            section {
+                                red { textLine("Invalid scope selection.") }
+                            }.run()
                             return
                         }
                     }
                 }
-            } else {
-                // Fallback if no scopes defined at all
-                if (options.allowEmptyScopes) {
-                    print("\nEnter a scope (optional, press Enter to skip): ")
-                    readLine()?.trim().orEmpty()
-                } else {
-                    print("\nEnter a scope (required): ")
-                    val entered = readLine()?.trim().orEmpty()
-                    if (entered.isEmpty()) {
-                        echo("A scope is required (allowEmptyScopes=false).", err = true)
-                        return
-                    }
-                    entered
+
+                options.allowCustomScopes -> {
+                    scope = scopeInput.trim()
+                }
+
+                else -> {
+                    section {
+                        red { textLine("Custom scopes are disabled. Please enter a valid scope.") }
+                    }.run()
+                    return
                 }
             }
+        } else if (options.allowEmptyScopes) {
+            scope = scopeInput.trim()
+        } else {
+            scope = scopeInput.trim()
+            if (scope.isEmpty()) {
+                section {
+                    red { textLine("Empty scopes are disabled. Please enter a valid scope.") }
+                }.run()
+                return
+            }
+        }
 
-        print("\nEnter a short description: ")
-        val description = readLine()?.trim().orEmpty()
+        val description = readInput("\nEnter a short description:").trim()
         if (description.isEmpty()) {
-            echo("Description cannot be empty.", err = true)
+            section {
+                red { textLine("The description cannot be empty. Please enter a valid description.") }
+            }.run()
             return
         }
 
-        // Optional breaking changes
         var breakingChangeDetails: String? = null
         if (selectedType in options.allowBreakingChanges) {
-            print("\nIs this a breaking change? (y/N): ")
-            val resp = readLine()?.trim()?.lowercase()
+            val resp = readInput("\nIs this a breaking change? (y/N):", "y", "n", "yes", "no").trim().lowercase()
             if (resp == "y" || resp == "yes") {
-                print("Describe the breaking change: ")
-                val bc = readLine()?.trim().orEmpty()
+                val bc = readInput("Describe the breaking change:").trim()
                 if (bc.isNotEmpty()) {
                     breakingChangeDetails = bc
                 }
             }
         }
 
-        // Optional issues
         var issuesLine: String? = null
         if (selectedType in options.allowIssues) {
-            print("\nReference issues? (comma-separated like 123,456 — leave blank to skip): ")
-            val issuesRaw = readLine()?.trim().orEmpty()
+            val issuesRaw = readInput("\nReference issues? (comma-separated like 123,456 — leave blank to skip):").trim()
             if (issuesRaw.isNotEmpty()) {
-                // Normalize: accept with or without '#'
                 val cleaned =
                     issuesRaw
                         .split(",")
@@ -376,7 +415,6 @@ class CommitCommand : BaseCommand() {
                 }
                 append(": $description")
 
-                // Footer content separated by blank line if needed
                 if (breakingChangeDetails != null || issuesLine != null) {
                     append("\n\n")
                 }
@@ -389,54 +427,69 @@ class CommitCommand : BaseCommand() {
                 }
             }
 
-        echo("\nGenerated Commit Message:")
-        echo(commitMessage)
-        print("\nDo you want to commit with this message? (y/N): ")
-        val response = readLine()?.lowercase()
+        section {
+            textLine("\nGenerated commit message:")
+            textLine(commitMessage)
+        }.run()
+        val response = readInput("\nDo you want to commit with this message? (y/N):", "y", "n", "yes", "no").lowercase()
         if (response == "y" || response == "yes") {
             val success = commitChanges(commitMessage)
             if (success && options.autoPush) {
                 pushChanges()
             }
         } else {
-            echo("Commit aborted.")
+            section {
+                textLine("Commit aborted.")
+            }.run()
         }
     }
 
-    private fun commitChanges(message: String): Boolean =
+    private fun Session.commitChanges(message: String): Boolean =
         try {
             val result = executeCommand("git", "commit", "-m", message)
             if (result.exitCode == 0) {
-                echo("Commit created successfully!")
-                if (result.output.isNotEmpty()) {
-                    echo(result.output)
-                }
+                section {
+                    textLine("Commit created successfully!")
+                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
+                }.run()
                 true
             } else {
-                echo("Failed to create commit. Exit code: ${result.exitCode}", err = true)
+                section {
+                    red { textLine("Failed to create commit. Exit code: ${result.exitCode}") }
+                }.run()
                 if (result.error.isNotEmpty()) {
-                    echo(result.error, err = true)
+                    section { red { textLine(result.error) } }.run()
                 }
                 false
             }
         } catch (e: Exception) {
-            echo("Error creating commit: ${e.message}", err = true)
+            section {
+                red { textLine("Error creating commit: ${e.message}") }
+            }.run()
             false
         }
 
-    private fun pushChanges() {
+    private fun Session.pushChanges() {
         try {
-            echo("Pushing changes (autoPush enabled)...")
+            section {
+                textLine("Pushing changes (autoPush enabled)...")
+            }.run()
             val result = executeCommand("git", "push")
             if (result.exitCode == 0) {
-                echo("Push successful.")
-                if (result.output.isNotEmpty()) echo(result.output)
+                section {
+                    textLine("Push successful.")
+                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
+                }.run()
             } else {
-                echo("Push failed. Exit code: ${result.exitCode}", err = true)
-                if (result.error.isNotEmpty()) echo(result.error, err = true)
+                section {
+                    red { textLine("Push failed. Exit code: ${result.exitCode}") }
+                    yellow { if (result.error.isNotEmpty()) textLine(result.error) }
+                }.run()
             }
         } catch (e: Exception) {
-            echo("Error pushing changes: ${e.message}", err = true)
+            section {
+                red { textLine("Error pushing changes: ${e.message}") }
+            }.run()
         }
     }
 
@@ -454,15 +507,17 @@ class CommitCommand : BaseCommand() {
             emptyList()
         }
 
-    private fun stageAll() {
+    private fun MainRenderScope.stageAll(onError: () -> Unit) {
         try {
             val result = executeCommand("git", "add", ".")
             if (result.exitCode != 0) {
-                echo("Failed to stage changes automatically.", err = true)
-                if (result.error.isNotEmpty()) echo(result.error, err = true)
+                red { textLine("Failed to stage changes automatically.") }
+                yellow { if (result.error.isNotEmpty()) textLine(result.error) }
+                onError()
             }
         } catch (e: Exception) {
-            echo("Error staging changes: ${e.message}", err = true)
+            red { textLine("Error staging changes: ${e.message}") }
+            onError()
         }
     }
 }

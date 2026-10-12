@@ -27,27 +27,19 @@ internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
 
 class CommitCommand : BaseCommand() {
     override fun Session.run(args: Array<String>) {
-        section {
-            if (args.contains("-h") || args.contains("--help")) {
-                showHelp()
-                return@section
-            }
-        }.run()
         generateCommit(extractConfigPath(args))
     }
 
     override fun MainRenderScope.showHelp() {
-        green {
-            textLine("Generate a commit message")
-            textLine("")
-            textLine("Usage: kommit commit [options]")
-            textLine("")
-            textLine("Options:")
-            textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
-            textLine("  -h, --help          Show this help message")
-            textLine("")
-            textLine("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
-        }
+        textLine("Generate a commit message")
+        textLine("")
+        textLine("Usage: kommit commit [options]")
+        textLine("")
+        textLine("Options:")
+        textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
+        textLine("  -h, --help          Show this help message")
+        textLine("")
+        textLine("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
     }
 
     private fun extractConfigPath(args: Array<String>): String {
@@ -113,8 +105,6 @@ class CommitCommand : BaseCommand() {
         val scopes: Map<String, List<String>>,
         val options: ResolvedOptions,
     ) {
-        fun isEmpty() = this == empty
-
         companion object {
             val empty = KommitConfig(emptyList(), emptyMap(), KommitOptions.withDefaults())
         }

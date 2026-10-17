@@ -80,7 +80,7 @@ object Git {
     fun MainRenderScope.stageAll(onError: () -> Unit) {
         try {
             val result = git("add", ".")
-            if (result is ProcessResult.Error) {
+            if (result is ProcessResult.Failure) {
                 red {
                     textLine("Failed to stage changes automatically.")
                     if (result.output.isNotEmpty()) textLine(result.output)

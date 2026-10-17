@@ -48,7 +48,7 @@ class ResetGpgCommand : BaseCommand() {
                     } else {
                         red {
                             textLine("Warning: Failed to kill GPG agent (it may not be running)")
-                            if (killResult!! is ProcessResult.Error) {
+                            if (killResult!! is ProcessResult.Failure) {
                                 textLine("Kill error: ${killResult!!.output}")
                             }
                         }
@@ -71,7 +71,7 @@ class ResetGpgCommand : BaseCommand() {
                     } else {
                         red {
                             textLine("Failed to start GPG agent")
-                            if (connectResult!! is ProcessResult.Error) {
+                            if (connectResult!! is ProcessResult.Failure) {
                                 textLine("Connect error: ${connectResult!!.output}")
                             }
                         }

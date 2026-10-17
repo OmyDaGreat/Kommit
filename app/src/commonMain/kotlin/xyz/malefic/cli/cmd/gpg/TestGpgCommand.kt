@@ -38,7 +38,7 @@ class TestGpgCommand : BaseCommand() {
         try {
             val versionResult = executeCommand("gpg", "--version")
 
-            if (versionResult is ProcessResult.Error) {
+            if (versionResult is ProcessResult.Failure) {
                 section {
                     red {
                         textLine("GPG is not available or not working properly")

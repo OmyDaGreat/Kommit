@@ -11,7 +11,7 @@ import com.kgit2.kommand.process.Command
 fun executeCommand(vararg command: String): ProcessResult {
     return try {
         if (command.isEmpty()) {
-            return ProcessResult.Error("No command provided")
+            return ProcessResult.Failure("No command provided")
         }
 
         val baseCommand = command[0]
@@ -27,7 +27,7 @@ fun executeCommand(vararg command: String): ProcessResult {
         if (result.status == 0) {
             ProcessResult.Success(result.stdout.orEmpty())
         } else {
-            ProcessResult.Error(
+            ProcessResult.Failure(
                 output = result.stdout.orEmpty(),
             )
         }
@@ -39,12 +39,12 @@ fun executeCommand(vararg command: String): ProcessResult {
             if (exitCode == 0) {
                 ProcessResult.Success(output = "Command executed successfully")
             } else {
-                ProcessResult.Error(
+                ProcessResult.Failure(
                     output = "Command failed with exit code $exitCode: ${e.message}",
                 )
             }
         } catch (fallbackError: Exception) {
-            ProcessResult.Error(
+            ProcessResult.Failure(
                 output = "Command execution failed: ${e.message}, fallback failed: ${fallbackError.message}",
             )
         }
@@ -54,7 +54,7 @@ fun executeCommand(vararg command: String): ProcessResult {
 sealed class ProcessResult(
     open val output: String,
 ) {
-    data class Error(
+    data class Failure(
         override val output: String,
     ) : ProcessResult(output)
 

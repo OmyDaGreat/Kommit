@@ -42,8 +42,8 @@ class TestGpgCommand : BaseCommand() {
                 section {
                     red {
                         textLine("GPG is not available or not working properly")
-                        if (versionResult.error.isNotEmpty()) {
-                            textLine("Error: ${versionResult.error}")
+                        if (versionResult is ProcessResult.Error) {
+                            textLine("Error: ${versionResult.output}")
                         }
                     }
                 }.run()

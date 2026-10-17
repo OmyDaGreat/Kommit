@@ -11,7 +11,7 @@ import com.kgit2.kommand.process.Command
 fun executeCommand(vararg command: String): ProcessResult {
     return try {
         if (command.isEmpty()) {
-            return ProcessResult(1, "", "No command provided")
+            return ProcessResult.Error(1, "No command provided")
         }
 
         val baseCommand = command[0]
@@ -22,45 +22,54 @@ fun executeCommand(vararg command: String): ProcessResult {
             cmd.args(*args.toTypedArray())
         }
 
-        // Use output() to capture stdout/stderr instead of inheriting
         val result = cmd.output()
 
-        ProcessResult(
-            exitCode = 0, // Assume success if no exception thrown
-            output = result.stdout ?: "",
-            error = result.stderr ?: "",
-        )
+        if (result.status == 0) {
+            ProcessResult.Success(result.stdout.orEmpty())
+        } else {
+            ProcessResult.Error(
+                exitCode = result.status ?: 1,
+                output = result.stdout.orEmpty(),
+            )
+        }
     } catch (e: Exception) {
-        // Fallback to system call if kommand fails
         try {
             val commandString = command.joinToString(" ")
             val exitCode = platform.posix.system(commandString)
 
-            ProcessResult(
-                exitCode = exitCode,
-                output = if (exitCode == 0) "Command executed successfully" else "",
-                error = if (exitCode != 0) "Command failed with exit code $exitCode: ${e.message}" else "",
-            )
+            if (exitCode == 0) {
+                ProcessResult.Success(output = "Command executed successfully")
+            } else {
+                ProcessResult.Error(
+                    exitCode = exitCode,
+                    output = "Command failed with exit code $exitCode: ${e.message}",
+                )
+            }
         } catch (fallbackError: Exception) {
-            ProcessResult(
+            ProcessResult.Error(
                 exitCode = 1,
-                output = "",
-                error = "Command execution failed: ${e.message}, fallback failed: ${fallbackError.message}",
+                output = "Command execution failed: ${e.message}, fallback failed: ${fallbackError.message}",
             )
         }
     }
 }
 
-/**
- * Execute a git command with the specified arguments
- */
-fun git(vararg args: String): ProcessResult = executeCommand("git", *args)
+sealed class ProcessResult(
+    open val exitCode: Int,
+    open val output: String,
+) {
+    data class Error(
+        override val exitCode: Int,
+        override val output: String,
+    ) : ProcessResult(
+            exitCode,
+            output,
+        )
 
-/**
- * Result of a process execution
- */
-data class ProcessResult(
-    val exitCode: Int,
-    val output: String,
-    val error: String,
-)
+    data class Success(
+        override val output: String,
+    ) : ProcessResult(
+            0,
+            output,
+        )
+}

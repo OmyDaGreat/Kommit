@@ -5,12 +5,18 @@ import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.foundation.text.yellow
 import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
+import xyz.malefic.cli.cmd.util.ProcessResult
 import xyz.malefic.cli.cmd.util.executeCommand
+
+/**
+ * Execute a git command with the specified arguments
+ */
+fun git(vararg args: String) = executeCommand("git", *args)
 
 object Git {
     fun Session.commitChanges(message: String): Boolean =
         try {
-            val result = executeCommand("git", "commit", "-m", message)
+            val result = git("commit", "-m", message)
             if (result.exitCode == 0) {
                 section {
                     textLine("Commit created successfully!")
@@ -21,8 +27,8 @@ object Git {
                 section {
                     red {
                         textLine("Failed to create commit. Exit code: ${result.exitCode}")
-                        if (result.error.isNotEmpty()) {
-                            textLine(result.error)
+                        if (result is ProcessResult.Error) {
+                            textLine(result.output)
                         }
                     }
                 }.run()
@@ -40,16 +46,18 @@ object Git {
             section {
                 textLine("Pushing changes (autoPush enabled)...")
             }.run()
-            val result = executeCommand("git", "push")
-            if (result.exitCode == 0) {
+            val result = git("push")
+            if (result is ProcessResult.Success) {
                 section {
                     textLine("Push successful.")
                     yellow { if (result.output.isNotEmpty()) textLine(result.output) }
                 }.run()
             } else {
                 section {
-                    red { textLine("Push failed. Exit code: ${result.exitCode}") }
-                    yellow { if (result.error.isNotEmpty()) textLine(result.error) }
+                    red {
+                        textLine("Push failed. Exit code: ${result.exitCode}")
+                        if (result.output.isNotEmpty()) textLine(result.output)
+                    }
                 }.run()
             }
         } catch (e: Exception) {
@@ -61,8 +69,8 @@ object Git {
 
     fun getStagedFiles(): List<String> =
         try {
-            val result = executeCommand("git", "diff", "--cached", "--name-only")
-            if (result.exitCode == 0) {
+            val result = git("diff", "--cached", "--name-only")
+            if (result is ProcessResult.Success) {
                 result.output.lines().mapNotNull { it.trim().ifEmpty { null } }
             } else {
                 emptyList()
@@ -73,10 +81,12 @@ object Git {
 
     fun MainRenderScope.stageAll(onError: () -> Unit) {
         try {
-            val result = executeCommand("git", "add", ".")
-            if (result.exitCode != 0) {
-                red { textLine("Failed to stage changes automatically.") }
-                yellow { if (result.error.isNotEmpty()) textLine(result.error) }
+            val result = git("add", ".")
+            if (result is ProcessResult.Error) {
+                red {
+                    textLine("Failed to stage changes automatically.")
+                    if (result.output.isNotEmpty()) textLine(result.output)
+                }
                 onError()
             }
         } catch (e: Exception) {

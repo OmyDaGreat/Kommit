@@ -1,12 +1,6 @@
 name: Build and Release
 
 on:
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'README.*'
-      - 'LICENSE'
-      - '.github/**/*.md'
   workflow_dispatch:
     inputs:
       version_bump:
@@ -176,12 +170,12 @@ jobs:
             fi
           fi
 
-          # Escape newlines for GitHub Actions output
-          changelog="${changelog//'%'/'%25'}"
-          changelog="${changelog//$'\n'/'%0A'}"
-          changelog="${changelog//$'\r'/'%0D'}"
-
-          echo "changelog=$changelog" >> $GITHUB_OUTPUT
+          # Preserve the changelog's line breaks in the job output.
+          {
+            echo 'changelog<<CHANGELOG_EOF'
+            printf '%s\n' "$changelog"
+            echo 'CHANGELOG_EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare Release Files
         run: |

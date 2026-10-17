@@ -8,8 +8,11 @@ import com.varabyte.kotter.foundation.text.yellow
 import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.BaseCommand
+import xyz.malefic.cli.cmd.commit.Git.commitChanges
+import xyz.malefic.cli.cmd.commit.Git.getStagedFiles
+import xyz.malefic.cli.cmd.commit.Git.pushChanges
+import xyz.malefic.cli.cmd.commit.Git.stageAll
 import xyz.malefic.cli.cmd.commit.Parsing.KommitConfig
-import xyz.malefic.cli.cmd.util.executeCommand
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
@@ -41,8 +44,6 @@ class CommitCommand : BaseCommand() {
             DEFAULT_CONFIG_PATH
         }
     }
-
-    // ----- Commit Flow -----
 
     private fun Session.generateCommit(configPath: String) {
         var error by liveVarOf(false)
@@ -121,7 +122,7 @@ class CommitCommand : BaseCommand() {
                 )
             } else {
                 readInputRetry(
-                    "\nEnter a scope ${if (options.allowEmptyScopes) "(or leave blank to skip)" else ""}:",
+                    "\nEnter a scope${if (options.allowEmptyScopes) " (or leave blank to skip)" else ""}:",
                     { it.isNotBlank() || (options.allowEmptyScopes && it.isBlank()) },
                     "Invalid scope. Please enter a valid scope.",
                 ).trim()
@@ -136,7 +137,7 @@ class CommitCommand : BaseCommand() {
 
         var breakingChangeDetails: String? = null
         if (selectedType in options.allowBreakingChanges) {
-            val resp = readInput("\nIs this a breaking change? (y/N):", "y", "n", "yes", "no").trim().lowercase()
+            val resp = readInputOptions("\nIs this a breaking change? (y/N):", "y", "n", "yes", "no").trim().lowercase()
             if (resp.lowercase() in listOf("y", "yes")) {
                 val bc = readInput("Describe the breaking change:").trim()
                 if (bc.isNotEmpty()) {
@@ -147,7 +148,10 @@ class CommitCommand : BaseCommand() {
 
         var issuesLine: String? = null
         if (selectedType in options.allowIssues) {
-            val issuesRaw = readInput("\nReference issues? (comma-separated like 123,456 — leave blank to skip):").trim()
+            val issuesRaw =
+                readInputRetry("\nReference issues? (comma-separated like 123,456 — leave blank to skip):", {
+                    it.isNotEmpty()
+                }, "Issues cannot be empty. Please enter a valid list of issues.").trim()
             if (issuesRaw.isNotEmpty()) {
                 val cleaned =
                     issuesRaw
@@ -166,8 +170,9 @@ class CommitCommand : BaseCommand() {
                 if (scope.isNotEmpty()) {
                     append("($scope)")
                 }
-                append(": $description")
-
+                if (description.isNotBlank()) {
+                    append(": $description")
+                }
                 if (breakingChangeDetails != null || issuesLine != null) {
                     append("\n\n")
                 }
@@ -184,93 +189,13 @@ class CommitCommand : BaseCommand() {
             textLine("\nGenerated commit message:")
             textLine(commitMessage)
         }.run()
-        val response = readInput("\nDo you want to commit with this message? (y/N):", "y", "n", "yes", "no").lowercase()
+        val response = readInputOptions("\nDo you want to commit with this message? (y/N):", "y", "n", "yes", "no").lowercase()
         if (response.lowercase() in listOf("y", "yes")) {
-            val success = commitChanges(commitMessage)
-            if (success && options.autoPush) {
+            if (commitChanges(commitMessage) && options.autoPush) {
                 pushChanges()
             }
         } else {
-            section {
-                textLine("Commit aborted.")
-            }.run()
-        }
-    }
-
-    private fun Session.commitChanges(message: String): Boolean =
-        try {
-            val result = executeCommand("git", "commit", "-m", message)
-            if (result.exitCode == 0) {
-                section {
-                    textLine("Commit created successfully!")
-                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
-                }.run()
-                true
-            } else {
-                section {
-                    red { textLine("Failed to create commit. Exit code: ${result.exitCode}") }
-                }.run()
-                if (result.error.isNotEmpty()) {
-                    section { red { textLine(result.error) } }.run()
-                }
-                false
-            }
-        } catch (e: Exception) {
-            section {
-                red { textLine("Error creating commit: ${e.message}") }
-            }.run()
-            false
-        }
-
-    private fun Session.pushChanges() {
-        try {
-            section {
-                textLine("Pushing changes (autoPush enabled)...")
-            }.run()
-            val result = executeCommand("git", "push")
-            if (result.exitCode == 0) {
-                section {
-                    textLine("Push successful.")
-                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
-                }.run()
-            } else {
-                section {
-                    red { textLine("Push failed. Exit code: ${result.exitCode}") }
-                    yellow { if (result.error.isNotEmpty()) textLine(result.error) }
-                }.run()
-            }
-        } catch (e: Exception) {
-            section {
-                red { textLine("Error pushing changes: ${e.message}") }
-            }.run()
-        }
-    }
-
-    // ----- Git Helpers -----
-
-    private fun getStagedFiles(): List<String> =
-        try {
-            val result = executeCommand("git", "diff", "--cached", "--name-only")
-            if (result.exitCode == 0) {
-                result.output.lines().mapNotNull { it.trim().ifEmpty { null } }
-            } else {
-                emptyList()
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-    private fun MainRenderScope.stageAll(onError: () -> Unit) {
-        try {
-            val result = executeCommand("git", "add", ".")
-            if (result.exitCode != 0) {
-                red { textLine("Failed to stage changes automatically.") }
-                yellow { if (result.error.isNotEmpty()) textLine(result.error) }
-                onError()
-            }
-        } catch (e: Exception) {
-            red { textLine("Error staging changes: ${e.message}") }
-            onError()
+            section { yellow { textLine("Commit aborted.") } }.run()
         }
     }
 }

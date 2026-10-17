@@ -148,16 +148,9 @@ class CommitCommand : BaseCommand() {
 
         var issuesLine: String? = null
         if (selectedType in options.allowIssues) {
-            val issuesRaw =
-                readInputRetry("\nReference issues? (comma-separated like 123,456 — leave blank to skip):", {
-                    it.isNotEmpty()
-                }, "Issues cannot be empty. Please enter a valid list of issues.").trim()
+            val issuesRaw = readInput("\nReference issues? (comma-separated like 123,456 — leave blank to skip):").trim()
             if (issuesRaw.isNotEmpty()) {
-                val cleaned =
-                    issuesRaw
-                        .split(",")
-                        .map { it.trim().trimStart('#') }
-                        .filter { it.matches(Regex("\\d+")) }
+                val cleaned = issuesRaw.split(",").map { it.trim().trimStart('#') }.filter { it.matches(Regex("\\d+")) }
                 if (cleaned.isNotEmpty()) {
                     issuesLine = cleaned.joinToString(", ") { "#$it" }
                 }

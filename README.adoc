@@ -1,7 +1,4 @@
 = Kommit: Conventional Commits But Easy
-:toc: macro
-:toc-title: Table of Contents
-:toclevels: 3
 :icons: font
 :source-highlighter: highlight.js
 :experimental:
@@ -10,17 +7,15 @@ image:https://github.com/OmyDaGreat/Kommit/actions/workflows/release.yml/badge.s
 image:https://img.shields.io/github/v/release/OmyDaGreat/Kommit[Latest Release,link=https://github.com/OmyDaGreat/Kommit/releases/latest]
 image:https://img.shields.io/badge/license-MIT-blue[License,link=LICENSE]
 
-A powerful command-line tool written in Kotlin that helps generate conventional commit messages based on a YAML-inspired configuration file. Kommit streamlines your Git workflow with interactive prompts and standardized commit formats.
+A simple command-line tool written in Kotlin that helps generate conventional commit messages based on a YAML configuration file. Using standardized configuration formats across your team, Kommit ensures consistency and clarity, making it easier to understand the history of your project and collaborate effectively.
 
-toc::[]
+== Features
 
-== 🚀 Features
-
-* ✅ Follows the link:https://www.conventionalcommits.org/[Conventional Commits] specification
-* ⚙️ Customizable commit types, scopes, and other options through a YAML-inspired configuration file
-* 💬 Interactive CLI prompts to guide you through creating well-formatted commits
-* 🔄 Support for breaking changes and issue references
-* 🛠️ GPG tooling for Git commit signing
+* Follows the link:https://www.conventionalcommits.org/[Conventional Commits] specification
+* Customizable commit types, scopes, and other options through a YAML configuration file
+* Interactive CLI prompts to guide you through creating well-formatted commits
+* Support for breaking changes and issue references
+* GPG tooling for Git commit signing and testing
 
 == Installation
 

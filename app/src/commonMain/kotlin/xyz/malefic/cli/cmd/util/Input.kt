@@ -5,6 +5,8 @@ import com.varabyte.kotter.foundation.input.input
 import com.varabyte.kotter.foundation.input.onInputEntered
 import com.varabyte.kotter.foundation.input.runUntilInputEntered
 import com.varabyte.kotter.foundation.liveVarOf
+import com.varabyte.kotter.foundation.runUntilSignal
+import com.varabyte.kotter.foundation.text.red
 import com.varabyte.kotter.foundation.text.text
 import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.runtime.Session
@@ -23,3 +25,44 @@ fun Session.readInput(
     }
     return value
 }
+
+fun Session.readInputRetry(
+    prompt: String,
+    condition: (String) -> Boolean,
+    retryPrompt: String = "Invalid input, please try again.",
+    vararg completions: String,
+): String {
+    var value by liveVarOf("")
+    var retryCounter by liveVarOf(0)
+    section {
+        textLine(prompt)
+        if (retryCounter > 0) {
+            red {
+                textLine(retryPrompt)
+            }
+        }
+        text("> ")
+        input(Completions(*completions, ignoreCase = false))
+    }.runUntilSignal {
+        onInputEntered {
+            if (!condition(input)) {
+                retryCounter++
+            } else {
+                value = input
+                signal()
+            }
+        }
+    }
+    return value
+}
+
+fun Session.readInputOptions(
+    prompt: String,
+    vararg completions: String,
+    retryPrompt: String = "Invalid input, please choose from the available options: ${completions.joinToString(", ")}.",
+) = readInputRetry(
+    prompt,
+    { it in completions },
+    retryPrompt,
+    *completions,
+)

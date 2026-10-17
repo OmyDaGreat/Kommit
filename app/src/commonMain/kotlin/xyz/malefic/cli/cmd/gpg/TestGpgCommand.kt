@@ -38,13 +38,11 @@ class TestGpgCommand : BaseCommand() {
         try {
             val versionResult = executeCommand("gpg", "--version")
 
-            if (versionResult.exitCode != 0) {
+            if (versionResult is ProcessResult.Error) {
                 section {
                     red {
                         textLine("GPG is not available or not working properly")
-                        if (versionResult is ProcessResult.Error) {
-                            textLine("Error: ${versionResult.output}")
-                        }
+                        textLine("Error: ${versionResult.output}")
                     }
                 }.run()
                 return
@@ -64,7 +62,7 @@ class TestGpgCommand : BaseCommand() {
             var keyResult by liveVarOf<ProcessResult?>(null)
             section {
                 keyResult?.let {
-                    if (it.exitCode == 0 && it.output.isNotEmpty()) {
+                    if (it is ProcessResult.Success) {
                         textLine("GPG secret keys found:")
                         textLine(it.output)
                         green { textLine("GPG agent appears to be working correctly!") }

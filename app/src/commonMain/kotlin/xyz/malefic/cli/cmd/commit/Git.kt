@@ -17,7 +17,7 @@ object Git {
     fun Session.commitChanges(message: String): Boolean =
         try {
             val result = git("commit", "-m", message)
-            if (result.exitCode == 0) {
+            if (result is ProcessResult.Success) {
                 section {
                     textLine("Commit created successfully!")
                     yellow { if (result.output.isNotEmpty()) textLine(result.output) }
@@ -26,10 +26,8 @@ object Git {
             } else {
                 section {
                     red {
-                        textLine("Failed to create commit. Exit code: ${result.exitCode}")
-                        if (result is ProcessResult.Error) {
-                            textLine(result.output)
-                        }
+                        textLine("Failed to create commit.")
+                        textLine(result.output)
                     }
                 }.run()
                 false
@@ -55,8 +53,8 @@ object Git {
             } else {
                 section {
                     red {
-                        textLine("Push failed. Exit code: ${result.exitCode}")
-                        if (result.output.isNotEmpty()) textLine(result.output)
+                        textLine("Push failed")
+                        textLine(result.output)
                     }
                 }.run()
             }

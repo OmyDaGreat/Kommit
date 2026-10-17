@@ -58,7 +58,7 @@ class ResetGpgCommand : BaseCommand() {
                 }
             }.run {
                 killResult = executeCommand("gpgconf", "--kill", "gpg-agent")
-                killed = killResult!!.exitCode == 0
+                killed = killResult!! is ProcessResult.Success
             }
 
             var started by liveVarOf<Boolean?>(null)
@@ -81,7 +81,7 @@ class ResetGpgCommand : BaseCommand() {
                 }
             }.run {
                 connectResult = executeCommand("gpg-connect-agent", "/bye")
-                started = connectResult!!.exitCode == 0
+                started = connectResult!! is ProcessResult.Success
             }
         } catch (e: Exception) {
             section { red { textLine("Error resetting GPG agent: ${e.message}") } }.run()

@@ -1,4 +1,4 @@
-= Kommit: Kotlin Conventional Commit Generator
+= Kommit: Conventional Commits But Easy
 :toc: macro
 :toc-title: Table of Contents
 :toclevels: 3
@@ -22,7 +22,7 @@ toc::[]
 * 🔄 Support for breaking changes and issue references
 * 🛠️ GPG tooling for Git commit signing
 
-== 📥 Installation
+== Installation
 
 === Using Scoop (Windows)
 
@@ -35,54 +35,52 @@ scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
 scoop install kommit
 ----
 
-=== Manual Installation
-
-1. Download the latest release from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]
-2. Extract the ZIP file to a directory of your choice
-3. Add the directory to your system PATH or create a symbolic link to the executable
-
-== 🚦 Quick Start
+=== Using Homebrew (macOS/Linux)
 
 [source,sh]
 ----
-# Create a default configuration file
-kommit create
+# Add the Malefic bucket to Homebrew
+brew tap OmyDaGreat/malefic
 
-# Generate a commit message interactively
-kommit
-
-# Or explicitly use the commit command
-kommit commit
+# Install Kommit
+brew install omydagreat/malefic/kommit
 ----
 
-== 📋 Usage Guide
+=== Manual Installation
 
-=== Basic Workflow
+1. Download the latest release from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]
+2. Extract the zip file
+3. Add the directory to your system PATH or create a symlink to the executable file
 
-1. Stage your changes with Git
-2. Run `kommit` to start the interactive commit process
-3. Follow the prompts to select commit type, scope, and description
-4. Review and confirm your commit message
+== Quick Start
 
-=== Command Reference
+[source,sh]
+----
+# Create a default configuration file (make sure to commit this file for team use)
+kommit create
+
+# Generate a commit message
+kommit
+----
+That's it! It's really that simple!
+
+== Command Reference
 
 Kommit provides subcommands for generating commits, managing configuration, and
 working with GPG signing:
 
-==== Commit Management
-* `commit`: Generate a conventional commit message interactively
+=== Commit Management
+* `kommit`/`kommit commit`: Generate a conventional commit message using the config file
+* `kommit create`: Create a default `.kommit.yaml` configuration file
 
-==== GPG Management
-* `gpg`: Parent command for GPG-related operations
-** `gpg test`: Test if the GPG agent is working by signing a test message
-** `gpg reset`: Reset the GPG agent to fix signing issues
-
-==== Miscellaneous
-* `create`: Create a default `.kommit.yaml` configuration file in the project root
+=== GPG Management
+* `kommit gpg`: Parent command for GPG-related operations
+** `kommit gpg test`: Test if the GPG agent is working by signing a test message
+** `kommit gpg reset`: Reset the GPG agent to fix signing issues
 
 TIP: Run `kommit --help` to see all available commands and options.
 
-== ⚙️ Configuration
+== Configuration
 
 === Configuration File Location
 
@@ -99,8 +97,6 @@ The configuration file uses a YAML-inspired format:
 
 [source,yaml]
 ----
-# Comments start with #
-
 # Commit Types
 types:
   - feat: A new feature
@@ -178,7 +174,7 @@ options:
 |Whether to remind the user to stage changes (true/false). When enabled, Kommit will check if there are staged changes before creating a commit. By default, Kommit will not remind you to stage changes as a result of `autoStage` being enabled.
 |===
 
-== 📝 Example Commit Messages
+== Example Commit Messages
 
 === Feature with Breaking Change
 
@@ -213,37 +209,31 @@ docs: update installation instructions
 Updated the README with more detailed installation instructions for different platforms.
 ----
 
-== 🔧 Troubleshooting
+== Common Issues
 
-=== Common Issues
-
-==== Git Not Found
+=== Git Not Found
 
 If you see an error like "Git command not found", ensure that Git is installed and available in your system PATH.
 
-==== Configuration File Not Found
+=== Kommit Not Seeing Staged Changes
 
-If Kommit can't find your configuration file, make sure it exists at the expected location, specify the path using the `--config` option, or create it with `kommit create`.
+If you're running Linux, make sure you have `less` installed, as `git` uses that to display staged changes.
 
-=== Getting Help
+=== Configuration File Not Found
 
-If you encounter any issues not covered here, please:
+If Kommit can't find your configuration file, make sure it exists at the expected location (the project root), specify the path using the `--config` option, or create it with `kommit create`.
 
-1. Check the link:https://github.com/OmyDaGreat/Kommit/issues[GitHub Issues] to see if it's a known problem
-2. Open a new issue if your problem hasn't been reported
+== Contributing
 
-== 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
+Contributions are always welcome! Here's how you can help:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes using Kommit (`kommit`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Commit & push your changes using Kommit
+4. Open a Pull Request
 
-Please make sure your code follows the project's coding style and includes appropriate tests.
+Please make sure your code follows the project's general coding style.
 
-== 📄 License
+== License
 
 This project is licensed under the MIT License; see the link:LICENSE[LICENSE] file for details.

@@ -290,46 +290,48 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.version }}
           body: |
-            # 🚀 Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
+            # Kommit ${{ steps.version.outputs.version }}
 
-            **Kommit** is a Kotlin-based conventional commit message generator that helps you create standardized commit messages following best practices.
+            Released on ${{ steps.date.outputs.date }}.
 
-            ## 📋 What's Changed
+            Kommit is a Kotlin-based command-line tool that helps generate standardized conventional commit messages from a YAML configuration file.
+
+            ## What's Changed
             ${{ steps.changelog.outputs.changelog }}
 
-            ## 📦 Installation
+            ## Installation
 
-            ### 🪣 Via Homebrew (macOS/Linux)
+            ### Using Homebrew (macOS/Linux)
             ```bash
             brew tap OmyDaGreat/malefic
             brew install OmyDaGreat/malefic/kommit
             ```
 
-            ### 🪣 Via Scoop (Windows)
+            ### Using Scoop (Windows)
             ```powershell
             scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
             scoop install kommit
             ```
 
-            ### 📥 Direct Download
-            Download the appropriate binary for your platform:
+            ### Manual Installation
+            Download the appropriate binary for your platform from the list below:
             - **Linux x64**: [kommit-linux-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64)
             - **macOS ARM64**: [kommit-macos-arm64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64)
             - **Windows x64**: [kommit-windows-x64.exe](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-windows-x64.exe)
 
-            ## 🔐 Verification
+            ## Verification
 
-            ### 🔑 SHA256 Checksums
+            ### SHA256 Checksums
             ```
             Linux x64:   ${{ steps.checksums.outputs.linux_sha256 }}
             macOS ARM64: ${{ steps.checksums.outputs.macos_arm64_sha256 }}
             Windows x64: ${{ steps.checksums.outputs.windows_sha256 }}
             ```
 
-            ## 📚 Documentation
-            For more information, check out the [README](https://github.com/OmyDaGreat/Kommit/blob/main/README.adoc) file.
+            ## Documentation
+            For more information, see the [README](https://github.com/OmyDaGreat/Kommit/blob/main/README.adoc).
 
-            ## 🙏 Feedback
+            ## Feedback
             If you encounter any issues or have suggestions, please [open an issue](https://github.com/OmyDaGreat/Kommit/issues/new) on GitHub.
           draft: false
           prerelease: false

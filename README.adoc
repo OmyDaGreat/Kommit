@@ -120,7 +120,6 @@ scopes:
 
 # Configuration Options
 options:
-  remindToStageChanges: true
   autoStage: false
   autoPush: true
   allowBreakingChanges:
@@ -167,16 +166,13 @@ options:
 |Whether to automatically push changes after a successful commit (true/false). When enabled, Kommit will push your changes to the remote repository immediately after committing. By default, changes are not pushed automatically.
 
 |`options.autoStage`
-|Whether to automatically stage all changes when no changes are staged (true/false). When enabled, Kommit will automatically stage all changes before creating a commit if no changes are staged. By default, changes are not staged automatically.
+|Whether to automatically stage all changes when no changes are staged (true/false). When enabled, Kommit will automatically stage all changes before creating a commit if no changes are staged. When disabled, Kommit will stop and remind you to stage changes first. By default, changes are not staged automatically.
 
 |`options.changesPrefix`
 |The prefix used for breaking changes in the footer. By default, breaking changes are prefixed with 'BREAKING CHANGES:' in the commit footer.
 
 |`options.issuePrefix`
 |The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
-
-|`options.remindToStageChanges`
-|Whether to remind the user to stage changes (true/false). When enabled, Kommit will check if there are staged changes before creating a commit. By default, Kommit will not remind you to stage changes.
 |===
 
 == Example Commit Messages

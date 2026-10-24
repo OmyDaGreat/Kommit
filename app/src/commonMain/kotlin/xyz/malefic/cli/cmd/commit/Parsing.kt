@@ -17,7 +17,6 @@ object Parsing {
 
     @Serializable
     data class KommitOptions(
-        val remindToStageChanges: Boolean? = null,
         val autoStage: Boolean? = null,
         val autoPush: Boolean? = null,
         val allowBreakingChanges: List<String>? = null,
@@ -30,7 +29,6 @@ object Parsing {
     ) {
         companion object {
             data class ResolvedOptions(
-                val remindToStageChanges: Boolean,
                 val autoStage: Boolean,
                 val autoPush: Boolean,
                 val allowBreakingChanges: Set<String>,
@@ -45,7 +43,6 @@ object Parsing {
             fun withDefaults(raw: KommitOptions? = null): ResolvedOptions {
                 val r = raw ?: KommitOptions()
                 return ResolvedOptions(
-                    remindToStageChanges = r.remindToStageChanges ?: false,
                     autoStage = r.autoStage ?: false,
                     autoPush = r.autoPush ?: false,
                     allowBreakingChanges = r.allowBreakingChanges?.toSet() ?: emptySet(),
@@ -173,7 +170,6 @@ object Parsing {
         fun stringOrNull(n: YamlNode?): String? = (n as? YamlScalar)?.content?.trim()
 
         return KommitOptions(
-            remindToStageChanges = boolOrNull(node["remindToStageChanges"]),
             autoStage = boolOrNull(node["autoStage"]),
             autoPush = boolOrNull(node["autoPush"]),
             allowBreakingChanges = stringList(node["allowBreakingChanges"]),

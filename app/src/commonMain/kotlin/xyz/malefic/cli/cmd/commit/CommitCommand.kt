@@ -72,20 +72,18 @@ class CommitCommand : BaseCommand() {
 
         val options = config.options
         section {
-            if (options.remindToStageChanges || options.autoStage) {
-                val staged = getStagedFiles()
-                if (staged.isEmpty()) {
-                    if (options.autoStage) {
-                        textLine("No staged changes. Auto-staging all changes (configured)...")
-                        stageAll { error = true }
-                    } else if (options.remindToStageChanges) {
-                        red {
-                            textLine(
-                                "No staged changes detected. Stage changes first (configure the autoStage option to stage automatically).",
-                            )
-                        }
-                        error = true
+            val staged = getStagedFiles()
+            if (staged.isEmpty()) {
+                if (options.autoStage) {
+                    textLine("No staged changes. Auto-staging all changes (configured)...")
+                    stageAll { error = true }
+                } else {
+                    red {
+                        textLine(
+                            "No staged changes detected. Stage changes first (configure the autoStage option to stage automatically).",
+                        )
                     }
+                    error = true
                 }
             }
         }.run()

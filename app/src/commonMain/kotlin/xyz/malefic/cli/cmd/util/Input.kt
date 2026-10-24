@@ -1,5 +1,6 @@
 package xyz.malefic.cli.cmd.util
 
+import com.varabyte.kotter.foundation.collections.liveListOf
 import com.varabyte.kotter.foundation.input.Completions
 import com.varabyte.kotter.foundation.input.input
 import com.varabyte.kotter.foundation.input.onInputEntered
@@ -54,6 +55,26 @@ fun Session.readInputRetry(
         }
     }
     return value
+}
+
+fun Session.readMultilineInput(prompt: String): String {
+    val lines = liveListOf<String>()
+    section {
+        textLine(prompt)
+        lines.forEach { textLine("> $it") }
+        text("> ")
+        input()
+    }.runUntilSignal {
+        onInputEntered {
+            if (input.isBlank()) {
+                signal()
+            } else {
+                lines += input.trimEnd()
+                clearInput()
+            }
+        }
+    }
+    return lines.joinToString("\n")
 }
 
 fun Session.readInputOptions(

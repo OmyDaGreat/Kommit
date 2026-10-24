@@ -16,6 +16,7 @@ import xyz.malefic.cli.cmd.commit.Parsing.KommitConfig
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
+import xyz.malefic.cli.cmd.util.readMultilineInput
 
 internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
 
@@ -135,6 +136,14 @@ class CommitCommand : BaseCommand() {
                 "Description cannot be empty. Please enter a valid description.",
             ).trim()
 
+        var body: String? = null
+        if (selectedType in options.allowBody) {
+            val bodyRaw = readMultilineInput("\nEnter a longer description (press Enter on an empty line to finish — leave blank to skip):")
+            if (bodyRaw.isNotBlank()) {
+                body = bodyRaw
+            }
+        }
+
         var breakingChangeDetails: String? = null
         if (selectedType in options.allowBreakingChanges) {
             val resp = readInputOptions("\nIs this a breaking change? (y/N):", "y", "n", "yes", "no").trim().lowercase()
@@ -165,6 +174,9 @@ class CommitCommand : BaseCommand() {
                 }
                 if (description.isNotBlank()) {
                     append(": $description")
+                }
+                if (!body.isNullOrBlank()) {
+                    append("\n\n$body")
                 }
                 if (breakingChangeDetails != null || issuesLine != null) {
                     append("\n\n")

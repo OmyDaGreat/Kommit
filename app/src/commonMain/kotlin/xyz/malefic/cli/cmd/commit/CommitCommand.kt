@@ -135,7 +135,7 @@ class CommitCommand : BaseCommand() {
             ).trim()
 
         var body: String? = null
-        if (selectedType in options.allowBody) {
+        if (options.allowBody) {
             val bodyRaw = readMultilineInput("\nEnter a longer description (press Enter on an empty line to finish — leave blank to skip):")
             if (bodyRaw.isNotBlank()) {
                 body = bodyRaw

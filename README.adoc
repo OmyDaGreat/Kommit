@@ -129,10 +129,7 @@ options:
   allowIssues:
     - feat
     - fix
-  allowBody:
-    - feat
-    - fix
-    - docs
+  allowBody: true
 ----
 
 === Configuration Options Explained
@@ -148,7 +145,7 @@ options:
 |List of available scopes. You can define scopes for all commit types under the `all` key, or specific scopes for particular commit types.
 
 |`options.allowBody`
-|List of types that can have a multi-line body. Only these types will prompt for a longer description, which is entered one line at a time and finished by pressing Enter on an empty line. The body is placed after the header, separated by a blank line. By default, no commit types will prompt for a body.
+|Whether to prompt for a multi-line body (true/false). When enabled, Kommit will prompt for a longer description, which is entered one line at a time and finished by pressing Enter on an empty line (leave it blank to skip). The body is placed after the header, separated by a blank line. By default, Kommit will prompt for a body.
 
 |`options.allowBreakingChanges`
 |List of types that can have breaking changes. Only these types will prompt for breaking changes. By default, no commit types will prompt for breaking changes.

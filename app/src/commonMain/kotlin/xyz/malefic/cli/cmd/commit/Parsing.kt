@@ -19,8 +19,8 @@ object Parsing {
     data class KommitOptions(
         val autoStage: Boolean? = null,
         val autoPush: Boolean? = null,
-        val allowBreakingChanges: List<String>? = null,
-        val allowIssues: List<String>? = null,
+        val allowBreakingChanges: Boolean? = null,
+        val allowIssues: Boolean? = null,
         val allowBody: Boolean? = null,
         val allowCustomScopes: Boolean? = null,
         val allowEmptyScopes: Boolean? = null,
@@ -31,8 +31,8 @@ object Parsing {
             data class ResolvedOptions(
                 val autoStage: Boolean,
                 val autoPush: Boolean,
-                val allowBreakingChanges: Set<String>,
-                val allowIssues: Set<String>,
+                val allowBreakingChanges: Boolean,
+                val allowIssues: Boolean,
                 val allowBody: Boolean,
                 val allowCustomScopes: Boolean,
                 val allowEmptyScopes: Boolean,
@@ -45,12 +45,12 @@ object Parsing {
                 return ResolvedOptions(
                     autoStage = r.autoStage ?: false,
                     autoPush = r.autoPush ?: false,
-                    allowBreakingChanges = r.allowBreakingChanges?.toSet() ?: emptySet(),
-                    allowIssues = r.allowIssues?.toSet() ?: emptySet(),
+                    allowBreakingChanges = r.allowBreakingChanges ?: true,
+                    allowIssues = r.allowIssues ?: true,
                     allowBody = r.allowBody ?: true,
                     allowCustomScopes = r.allowCustomScopes ?: true,
                     allowEmptyScopes = r.allowEmptyScopes ?: true,
-                    changesPrefix = r.changesPrefix ?: "BREAKING CHANGES:",
+                    changesPrefix = r.changesPrefix ?: "BREAKING CHANGE:",
                     issuePrefix = r.issuePrefix ?: "ISSUES CLOSED:",
                 )
             }
@@ -164,16 +164,13 @@ object Parsing {
                 }
             }
 
-        fun stringList(n: YamlNode?): List<String>? =
-            if (n is YamlList) n.items.mapNotNull { (it as? YamlScalar)?.content?.trim() } else null
-
         fun stringOrNull(n: YamlNode?): String? = (n as? YamlScalar)?.content?.trim()
 
         return KommitOptions(
             autoStage = boolOrNull(node["autoStage"]),
             autoPush = boolOrNull(node["autoPush"]),
-            allowBreakingChanges = stringList(node["allowBreakingChanges"]),
-            allowIssues = stringList(node["allowIssues"]),
+            allowBreakingChanges = boolOrNull(node["allowBreakingChanges"]),
+            allowIssues = boolOrNull(node["allowIssues"]),
             allowBody = boolOrNull(node["allowBody"]),
             allowCustomScopes = boolOrNull(node["allowCustomScopes"]),
             allowEmptyScopes = boolOrNull(node["allowEmptyScopes"]),

@@ -142,11 +142,13 @@ class CommitCommand : BaseCommand() {
             }
         }
 
+        var isBreakingChange = false
         var breakingChangeDetails: String? = null
-        if (selectedType in options.allowBreakingChanges) {
+        if (options.allowBreakingChanges) {
             val resp = readInputOptions("\nIs this a breaking change? (y/N):", "y", "n", "yes", "no").trim().lowercase()
             if (resp.lowercase() in listOf("y", "yes")) {
-                val bc = readInput("Describe the breaking change:").trim()
+                isBreakingChange = true
+                val bc = readInput("Describe the breaking change (leave blank to skip):").trim()
                 if (bc.isNotEmpty()) {
                     breakingChangeDetails = bc
                 }
@@ -154,7 +156,7 @@ class CommitCommand : BaseCommand() {
         }
 
         var issuesLine: String? = null
-        if (selectedType in options.allowIssues) {
+        if (options.allowIssues) {
             val issuesRaw = readInput("\nReference issues? (comma-separated like 123,456 — leave blank to skip):").trim()
             if (issuesRaw.isNotEmpty()) {
                 val cleaned = issuesRaw.split(",").map { it.trim().trimStart('#') }.filter { it.matches(Regex("\\d+")) }
@@ -169,6 +171,9 @@ class CommitCommand : BaseCommand() {
                 append(selectedType)
                 if (scope.isNotEmpty()) {
                     append("($scope)")
+                }
+                if (isBreakingChange) {
+                    append("!")
                 }
                 if (description.isNotBlank()) {
                     append(": $description")

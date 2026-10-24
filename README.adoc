@@ -122,13 +122,8 @@ scopes:
 options:
   autoStage: false
   autoPush: true
-  allowBreakingChanges:
-    - feat
-    - fix
-    - refactor
-  allowIssues:
-    - feat
-    - fix
+  allowBreakingChanges: true
+  allowIssues: true
   allowBody: true
 ----
 
@@ -148,7 +143,7 @@ options:
 |Whether to prompt for a multi-line body (true/false). When enabled, Kommit will prompt for a longer description, which is entered one line at a time and finished by pressing Enter on an empty line (leave it blank to skip). The body is placed after the header, separated by a blank line. By default, Kommit will prompt for a body.
 
 |`options.allowBreakingChanges`
-|List of types that can have breaking changes. Only these types will prompt for breaking changes. By default, no commit types will prompt for breaking changes.
+|Whether to prompt for breaking changes (true/false). When enabled, Kommit will ask whether the commit is a breaking change; if it is, a `!` is added after the type/scope in the header, and an optional description is added to the footer after `changesPrefix`. By default, Kommit will prompt for breaking changes.
 
 |`options.allowCustomScopes`
 |Whether to allow custom scopes (true/false). When enabled, users can enter scopes not defined in the configuration. By default, users can enter custom scopes not defined in the configuration.
@@ -157,7 +152,7 @@ options:
 |Whether to allow empty scopes (true/false). When enabled, users can create commits without a scope. By default, commits can be created without specifying a scope.
 
 |`options.allowIssues`
-|List of types that can reference issues. Only these types will prompt for issue numbers, entered comma-separated (e.g. `123,456`). The issues are added to the commit footer after `issuePrefix`. By default, no commit types will prompt for issue references.
+|Whether to prompt for issue references (true/false). When enabled, Kommit will prompt for issue numbers, entered comma-separated (e.g. `123,456`) or left blank to skip. The issues are added to the commit footer after `issuePrefix`. By default, Kommit will prompt for issue references.
 
 |`options.autoPush`
 |Whether to automatically push changes after a successful commit (true/false). When enabled, Kommit will push your changes to the remote repository immediately after committing. By default, changes are not pushed automatically.
@@ -166,7 +161,7 @@ options:
 |Whether to automatically stage all changes when no changes are staged (true/false). When enabled, Kommit will automatically stage all changes before creating a commit if no changes are staged. When disabled, Kommit will stop and remind you to stage changes first. By default, changes are not staged automatically.
 
 |`options.changesPrefix`
-|The prefix used for breaking changes in the footer. By default, breaking changes are prefixed with 'BREAKING CHANGES:' in the commit footer.
+|The prefix used for breaking changes in the footer. By default, breaking changes are prefixed with 'BREAKING CHANGE:' in the commit footer, as required by the Conventional Commits specification. Changing it may prevent tools such as semantic-release from detecting breaking changes.
 
 |`options.issuePrefix`
 |The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
@@ -182,8 +177,7 @@ feat(ui)!: add new button component
 
 this adds a new reusable button component with various styles and sizes
 
-BREAKING CHANGES: Changes the API for button styling
-
+BREAKING CHANGE: Changes the API for button styling
 ISSUES CLOSED: #123, #456
 ----
 

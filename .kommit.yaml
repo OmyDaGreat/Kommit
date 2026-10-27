@@ -1,14 +1,35 @@
-# Simple Conventional Commit Configuration
+# Kommit's own Conventional Commit configuration
 
 types:
   - feat: A new feature
   - fix: A bug fix
-  - docs: Documentation only changes
   - refactor: A code change that neither fixes a bug nor adds a feature
-  - chore: Other changes that don't modify src or test files
+  - perf: A code change that improves performance
+  - docs: Documentation only changes
+  - chore: Build, CI, dependency, and other changes that don't modify src
 
 scopes:
   all:
-    - core
-    - ui
-    - docs
+    - core     # CLI entry point and command routing
+    - commit   # kommit commit / create
+    - config   # .kommit.yaml parsing
+    - gpg      # kommit gpg test / reset
+    - input    # interactive prompts
+    - process  # running git and other external commands
+  chore:
+    - deps     # dependency updates (Renovate)
+    - actions  # GitHub Actions workflows
+    - gradle   # build scripts and wrapper
+    - release  # packaging and publishing
+    - docs     # README and other docs
+  docs:
+    - readme
+
+options:
+  stageMode: review
+  autoPush: false
+  allowBreakingChanges: true
+  allowIssues: true
+  allowBody: true
+  allowCustomScopes: true
+  allowEmptyScopes: true

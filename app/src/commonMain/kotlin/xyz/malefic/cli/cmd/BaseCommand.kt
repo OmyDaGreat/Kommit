@@ -4,6 +4,8 @@ import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
 
+internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
+
 /**
  * Base class for all commands in the Kommit CLI application.
  */
@@ -33,6 +35,18 @@ abstract class BaseCommand {
             }
         }.run()
         return help
+    }
+
+    /**
+     * Returns the path passed with -c/--config, or [DEFAULT_CONFIG_PATH].
+     */
+    protected fun extractConfigPath(args: Array<String>): String {
+        val configIndex = args.indexOfFirst { it == "-c" || it == "--config" }
+        return if (configIndex >= 0 && configIndex + 1 < args.size) {
+            args[configIndex + 1]
+        } else {
+            DEFAULT_CONFIG_PATH
+        }
     }
 
     /**

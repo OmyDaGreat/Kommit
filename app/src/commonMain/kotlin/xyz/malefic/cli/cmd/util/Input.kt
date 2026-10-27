@@ -51,6 +51,7 @@ fun Session.readInputRetry(
         onInputEntered {
             if (!condition(input)) {
                 retryCounter++
+                clearInput()
             } else {
                 value = input
                 signal()
@@ -90,6 +91,26 @@ fun Session.readInputOptions(
     retryPrompt,
     *completions,
 )
+
+/**
+ * Ask a yes/no question, returning [default] when the user just presses enter.
+ */
+fun Session.readConfirm(
+    prompt: String,
+    default: Boolean,
+): Boolean {
+    val answer =
+        readInputRetry(
+            "$prompt ${if (default) "(Y/n)" else "(y/N)"}:",
+            { it.trim().lowercase() in listOf("", "y", "n", "yes", "no") },
+            "Please answer y or n.",
+            "y",
+            "n",
+            "yes",
+            "no",
+        ).trim().lowercase()
+    return if (answer.isEmpty()) default else answer in listOf("y", "yes")
+}
 
 /**
  * Show a checklist of [options] and return the indices the user left selected.

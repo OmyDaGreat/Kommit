@@ -5,7 +5,7 @@ import com.varabyte.kotter.foundation.text.bold
 import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.commit.CommitCommand
-import xyz.malefic.cli.cmd.commit.CreateConfigCommand
+import xyz.malefic.cli.cmd.create.CreateCommand
 import xyz.malefic.cli.cmd.gpg.GpgCommand
 
 /**
@@ -29,7 +29,7 @@ fun main(args: Array<String>) =
             }
 
             "create" -> {
-                with(CreateConfigCommand()) {
+                with(CreateCommand()) {
                     this@session.execute(commandArgs)
                 }
             }
@@ -59,7 +59,7 @@ private fun Session.showHelp() {
         textLine()
         textLine("Commands:")
         textLine("  commit  Generate a commit message")
-        textLine("  create  Create a default configuration file for Kommit")
+        textLine("  create  Interactively create a configuration file for Kommit")
         textLine("  gpg     GPG-related commands for managing and testing GPG signing")
         textLine("  help    Show this help message")
     }.run()

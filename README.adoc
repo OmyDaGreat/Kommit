@@ -51,7 +51,7 @@ brew install omydagreat/malefic/kommit
 
 [source,sh]
 ----
-# Create a default configuration file (make sure to commit this file for team use)
+# Walk through creating a configuration file (make sure to commit this file for team use)
 kommit create
 
 # Generate a commit message
@@ -66,7 +66,7 @@ working with GPG signing:
 
 === Commit Management
 * `kommit`/`kommit commit`: Generate a conventional commit message using the config file
-* `kommit create`: Create a default `.kommit.yaml` configuration file
+* `kommit create`: Interactively create a `.kommit.yaml`, choosing commit types, scopes (suggested from your git history), and options. Use `--defaults` to skip the prompts and `--config PATH` to write elsewhere
 
 === GPG Management
 * `kommit gpg`: Parent command for GPG-related operations

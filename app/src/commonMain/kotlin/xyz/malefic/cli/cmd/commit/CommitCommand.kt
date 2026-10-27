@@ -21,8 +21,6 @@ import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
 import xyz.malefic.cli.cmd.util.readMultilineInput
 
-internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
-
 class CommitCommand : BaseCommand() {
     override fun Session.run(args: Array<String>) {
         generateCommit(extractConfigPath(args))
@@ -37,16 +35,7 @@ class CommitCommand : BaseCommand() {
         textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
         textLine("  -h, --help          Show this help message")
         textLine()
-        textLine("If no configuration exists, run 'kommit create' to scaffold a default .kommit.yaml")
-    }
-
-    private fun extractConfigPath(args: Array<String>): String {
-        val configIndex = args.indexOfFirst { it == "-c" || it == "--config" }
-        return if (configIndex >= 0 && configIndex + 1 < args.size) {
-            args[configIndex + 1]
-        } else {
-            DEFAULT_CONFIG_PATH
-        }
+        textLine("If no configuration exists, run 'kommit create' to set up a .kommit.yaml")
     }
 
     private fun Session.generateCommit(configPath: String) {

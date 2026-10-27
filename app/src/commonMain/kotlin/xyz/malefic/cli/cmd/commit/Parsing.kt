@@ -15,9 +15,15 @@ object Parsing {
         val description: String = "",
     )
 
+    enum class StageMode {
+        NONE,
+        REVIEW,
+        AUTO,
+    }
+
     @Serializable
     data class KommitOptions(
-        val autoStage: Boolean? = null,
+        val stageMode: StageMode? = null,
         val autoPush: Boolean? = null,
         val allowBreakingChanges: Boolean? = null,
         val allowIssues: Boolean? = null,
@@ -29,7 +35,7 @@ object Parsing {
     ) {
         companion object {
             data class ResolvedOptions(
-                val autoStage: Boolean,
+                val stageMode: StageMode,
                 val autoPush: Boolean,
                 val allowBreakingChanges: Boolean,
                 val allowIssues: Boolean,
@@ -43,7 +49,7 @@ object Parsing {
             fun withDefaults(raw: KommitOptions? = null): ResolvedOptions {
                 val r = raw ?: KommitOptions()
                 return ResolvedOptions(
-                    autoStage = r.autoStage ?: false,
+                    stageMode = r.stageMode ?: StageMode.NONE,
                     autoPush = r.autoPush ?: false,
                     allowBreakingChanges = r.allowBreakingChanges ?: true,
                     allowIssues = r.allowIssues ?: true,
@@ -166,8 +172,14 @@ object Parsing {
 
         fun stringOrNull(n: YamlNode?): String? = (n as? YamlScalar)?.content?.trim()
 
+        fun stageModeOrNull(n: YamlNode?): StageMode? =
+            stringOrNull(n)?.let { raw ->
+                StageMode.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
+                    ?: error("Value for 'stageMode' is invalid: Expected one of ${StageMode.entries.joinToString { it.name.lowercase() }}.")
+            }
+
         return KommitOptions(
-            autoStage = boolOrNull(node["autoStage"]),
+            stageMode = stageModeOrNull(node["stageMode"]),
             autoPush = boolOrNull(node["autoPush"]),
             allowBreakingChanges = boolOrNull(node["allowBreakingChanges"]),
             allowIssues = boolOrNull(node["allowIssues"]),

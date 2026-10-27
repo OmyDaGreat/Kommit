@@ -120,7 +120,7 @@ scopes:
 
 # Configuration Options
 options:
-  autoStage: false
+  stageMode: none
   autoPush: true
   allowBreakingChanges: true
   allowIssues: true
@@ -157,14 +157,14 @@ options:
 |`options.autoPush`
 |Whether to automatically push changes after a successful commit (true/false). When enabled, Kommit will push your changes to the remote repository immediately after committing. By default, changes are not pushed automatically.
 
-|`options.autoStage`
-|Whether to automatically stage all changes when no changes are staged (true/false). When enabled, Kommit will automatically stage all changes before creating a commit if no changes are staged. When disabled, Kommit will stop and remind you to stage changes first. By default, changes are not staged automatically.
-
 |`options.changesPrefix`
 |The prefix used for breaking changes in the footer. By default, breaking changes are prefixed with 'BREAKING CHANGE:' in the commit footer, as required by the Conventional Commits specification. Changing it may prevent tools such as semantic-release from detecting breaking changes.
 
 |`options.issuePrefix`
 |The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
+
+|`options.stageMode`
+|How Kommit stages changes before committing (none/review/auto). `none`: Kommit only commits what is already staged and stops with a reminder if nothing is. `review`: right before committing, Kommit lists every changed file (staged, unstaged and untracked) and lets you pick which ones to stage and commit; unselected files are unstaged. `auto`: if nothing is staged, Kommit stages all changes automatically. Defaults to `none`.
 |===
 
 == Example Commit Messages

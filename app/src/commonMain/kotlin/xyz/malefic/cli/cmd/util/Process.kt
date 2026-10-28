@@ -24,17 +24,29 @@ data class ProcessResult(
 }
 
 /**
- * Run a command and capture its output. Stdin is closed, so the command can never block on or read
- * from the terminal Kotter is using.
+ * Run a command and capture its output. Stdin receives [input] if given and is closed otherwise, so the command can never block on or read from the terminal Kotter is using.
  *
- * Output must not contain NUL bytes: kommand passes it through a C string and aborts the process
- * otherwise, so avoid flags like `git -z`.
+ * Output must not contain NUL bytes: kommand passes it through a C string and aborts the process otherwise, so avoid flags like `git -z`.
  */
-fun runCommand(vararg command: String): ProcessResult =
+fun runCommand(
+    vararg command: String,
+    input: String? = null,
+): ProcessResult =
     spawn(command) {
-        stdin(Stdio.Null).stdout(Stdio.Pipe).stderr(Stdio.Pipe).output().let {
-            ProcessResult(it.status ?: -1, it.stdout.orEmpty(), it.stderr.orEmpty())
-        }
+        stdout(Stdio.Pipe).stderr(Stdio.Pipe)
+        val output =
+            if (input == null) {
+                stdin(Stdio.Null).output()
+            } else {
+                stdin(Stdio.Pipe).spawn().run {
+                    bufferedStdin()?.apply {
+                        writeLine(input)
+                        flush()
+                    }
+                    waitWithOutput()
+                }
+            }
+        ProcessResult(output.status ?: -1, output.stdout.orEmpty(), output.stderr.orEmpty())
     }
 
 /**

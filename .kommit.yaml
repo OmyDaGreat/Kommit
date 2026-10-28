@@ -27,9 +27,9 @@ scopes:
 
 options:
   stageMode: review
-  autoPush: false
+  autoPush: true
   allowBreakingChanges: true
   allowIssues: true
   allowBody: true
-  allowCustomScopes: true
+  allowCustomScopes: false
   allowEmptyScopes: true

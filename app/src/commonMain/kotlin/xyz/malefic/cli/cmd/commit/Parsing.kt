@@ -33,19 +33,19 @@ object Parsing {
         val changesPrefix: String? = null,
         val issuePrefix: String? = null,
     ) {
-        companion object {
-            data class ResolvedOptions(
-                val stageMode: StageMode,
-                val autoPush: Boolean,
-                val allowBreakingChanges: Boolean,
-                val allowIssues: Boolean,
-                val allowBody: Boolean,
-                val allowCustomScopes: Boolean,
-                val allowEmptyScopes: Boolean,
-                val changesPrefix: String,
-                val issuePrefix: String,
-            )
+        data class ResolvedOptions(
+            val stageMode: StageMode,
+            val autoPush: Boolean,
+            val allowBreakingChanges: Boolean,
+            val allowIssues: Boolean,
+            val allowBody: Boolean,
+            val allowCustomScopes: Boolean,
+            val allowEmptyScopes: Boolean,
+            val changesPrefix: String,
+            val issuePrefix: String,
+        )
 
+        companion object {
             fun withDefaults(raw: KommitOptions? = null): ResolvedOptions {
                 val r = raw ?: KommitOptions()
                 return ResolvedOptions(
@@ -66,7 +66,7 @@ object Parsing {
     data class KommitConfig(
         val types: List<TypeEntry>,
         val scopes: Map<String, List<String>>,
-        val options: KommitOptions.Companion.ResolvedOptions,
+        val options: KommitOptions.ResolvedOptions,
     ) {
         companion object {
             val empty = KommitConfig(emptyList(), emptyMap(), KommitOptions.withDefaults())

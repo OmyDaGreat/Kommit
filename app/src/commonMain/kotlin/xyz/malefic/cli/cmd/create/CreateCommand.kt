@@ -216,7 +216,7 @@ class CreateCommand : BaseCommand() {
             emptyMap()
         }
 
-    private fun Session.askOptions(): KommitOptions.Companion.ResolvedOptions {
+    private fun Session.askOptions(): KommitOptions.ResolvedOptions {
         step(3, "Options")
         val defaults = KommitOptions.withDefaults()
         val modes = StageMode.entries.map { it.name.lowercase() }

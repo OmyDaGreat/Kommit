@@ -133,25 +133,24 @@ jobs:
       - name: Generate Changelog
         id: changelog
         run: |
-          # Get the latest tag or use the initial commit if no tags exist
           latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
 
           if [ -z "$latest_tag" ]; then
-            # If no tags exist, get all commits
             echo "No previous tags found, including all commits in changelog"
-            changelog=$(git log --pretty=format:"* %s" --reverse)
+            range=HEAD
           else
-            # Get commits since the last tag
             echo "Getting commits since $latest_tag"
-            changelog=$(git log ${latest_tag}..HEAD --pretty=format:"* %s" --reverse)
-
-            # If no commits since last tag, add a message
-            if [ -z "$changelog" ]; then
-              changelog="No changes since last release"
-            fi
+            range="${latest_tag}..HEAD"
           fi
 
-          # Preserve the changelog's line breaks in the job output.
+          changelog=$(git rev-list --reverse "$range" | while read -r sha; do
+            printf '* %s\n' "$(git log -1 --format=%B "$sha" | head -n 1)"
+          done)
+
+          if [ -z "$changelog" ]; then
+            changelog="No changes since last release"
+          fi
+
           {
             echo 'changelog<<CHANGELOG_EOF'
             printf '%s\n' "$changelog"

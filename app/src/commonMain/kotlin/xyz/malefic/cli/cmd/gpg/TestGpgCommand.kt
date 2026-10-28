@@ -75,9 +75,9 @@ class TestGpgCommand : BaseCommand() {
                 } ?: run {
                     yellow { textLine("Checking for secret keys...") }
                 }
-            }
+            }.run()
         } catch (e: Exception) {
-            section { red { ("Error testing GPG agent: ${e.message}") } }
+            section { red { ("Error testing GPG agent: ${e.message}") } }.run()
         }
     }
 }

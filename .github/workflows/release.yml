@@ -90,7 +90,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Set up JDK 21 for Gradle
+      - name: Set up JDK 27 for Gradle
         uses: actions/setup-java@v6
         with:
           distribution: temurin

@@ -9,7 +9,7 @@ import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.util.ProcessResult
-import xyz.malefic.cli.cmd.util.executeCommand
+import xyz.malefic.cli.cmd.util.runCommand
 
 /**
  * Command for testing if the GPG agent is working.
@@ -35,49 +35,46 @@ class TestGpgCommand : BaseCommand() {
      * Tests the GPG agent for both its existence and any secret keys
      */
     private fun Session.testGpgAgent() {
-        try {
-            val versionResult = executeCommand("gpg", "--version")
-
-            if (versionResult is ProcessResult.Failure) {
-                section {
-                    red {
-                        textLine("GPG is not available or not working properly")
-                        textLine("Error: ${versionResult.output}")
-                    }
-                }.run()
-                return
-            }
-
+        val versionResult = runCommand("gpg", "--version")
+        if (!versionResult.success) {
             section {
-                green { textLine("GPG is available") }
-                textLine("Version info:")
-                textLine(
-                    versionResult.output
-                        .lines()
-                        .take(3)
-                        .joinToString("\n"),
-                )
-            }.run()
-
-            var keyResult by liveVarOf<ProcessResult?>(null)
-            section {
-                keyResult?.let {
-                    if (it is ProcessResult.Success) {
-                        textLine("GPG secret keys found:")
-                        textLine(it.output)
-                        green { textLine("GPG agent appears to be working correctly!") }
-                    } else {
-                        yellow {
-                            textLine("No GPG secret keys found. You may need to import or generate a GPG key.")
-                            textLine("Use 'gpg --gen-key' to generate a new key.")
-                        }
-                    }
-                } ?: run {
-                    yellow { textLine("Checking for secret keys...") }
+                red {
+                    textLine("GPG is not available or not working properly")
+                    textLine("Error: ${versionResult.message}")
                 }
             }.run()
-        } catch (e: Exception) {
-            section { red { ("Error testing GPG agent: ${e.message}") } }.run()
+            return
+        }
+
+        section {
+            green { textLine("GPG is available") }
+            textLine("Version info:")
+            textLine(
+                versionResult.stdout
+                    .lines()
+                    .take(3)
+                    .joinToString("\n"),
+            )
+        }.run()
+
+        var keyResult by liveVarOf<ProcessResult?>(null)
+        section {
+            keyResult?.let {
+                if (it.success && it.stdout.isNotBlank()) {
+                    textLine("GPG secret keys found:")
+                    textLine(it.stdout)
+                    green { textLine("GPG agent appears to be working correctly!") }
+                } else {
+                    yellow {
+                        textLine("No GPG secret keys found. You may need to import or generate a GPG key.")
+                        textLine("Use 'gpg --gen-key' to generate a new key.")
+                    }
+                }
+            } ?: run {
+                yellow { textLine("Checking for secret keys...") }
+            }
+        }.run {
+            keyResult = runCommand("gpg", "--list-secret-keys")
         }
     }
 }

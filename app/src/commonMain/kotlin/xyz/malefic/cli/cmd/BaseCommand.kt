@@ -10,6 +10,8 @@ internal const val DEFAULT_CONFIG_PATH = ".kommit.yaml"
  * Base class for all commands in the Kommit CLI application.
  */
 abstract class BaseCommand {
+    private val deferred = mutableListOf<() -> Unit>()
+
     /**
      * Executes the command with the given arguments.
      */
@@ -22,6 +24,20 @@ abstract class BaseCommand {
         if (helpChecker(args)) return
         run(args)
     }
+
+    /**
+     * Queue work that needs the real terminal (e.g. commands that may prompt via
+     * [xyz.malefic.cli.cmd.util.runInteractive]). Kotter keeps reading the keyboard for the whole session,
+     * so this runs only once the session has ended.
+     */
+    protected fun afterSession(block: () -> Unit) {
+        deferred += block
+    }
+
+    /**
+     * Runs everything queued with [afterSession]. Called by main once the session has ended.
+     */
+    fun runDeferred() = deferred.forEach { it() }
 
     /**
      * Checks for help arguments when executing.

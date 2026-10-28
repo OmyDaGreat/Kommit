@@ -9,7 +9,7 @@ import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.BaseCommand
 import xyz.malefic.cli.cmd.util.ProcessResult
-import xyz.malefic.cli.cmd.util.executeCommand
+import xyz.malefic.cli.cmd.util.runCommand
 
 /**
  * Command for resetting the GPG agent.
@@ -38,53 +38,41 @@ class ResetGpgCommand : BaseCommand() {
             textLine("Resetting the GPG agent...")
         }.run()
 
-        try {
-            var killed by liveVarOf<Boolean?>(null)
-            var killResult by liveVarOf<ProcessResult?>(null)
-            section {
-                killed?.let {
-                    if (it) {
-                        green { textLine("GPG agent killed successfully") }
-                    } else {
-                        red {
-                            textLine("Warning: Failed to kill GPG agent (it may not be running)")
-                            if (killResult!! is ProcessResult.Failure) {
-                                textLine("Kill error: ${killResult!!.output}")
-                            }
-                        }
+        var killResult by liveVarOf<ProcessResult?>(null)
+        section {
+            killResult?.let {
+                if (it.success) {
+                    green { textLine("GPG agent killed successfully") }
+                } else {
+                    red {
+                        textLine("Warning: Failed to kill GPG agent (it may not be running)")
+                        if (it.message.isNotEmpty()) textLine("Kill error: ${it.message}")
                     }
-                } ?: run {
-                    yellow { textLine("Killing GPG agent...") }
                 }
-            }.run {
-                killResult = executeCommand("gpgconf", "--kill", "gpg-agent")
-                killed = killResult!! is ProcessResult.Success
+            } ?: run {
+                yellow { textLine("Killing GPG agent...") }
             }
+        }.run {
+            killResult = runCommand("gpgconf", "--kill", "gpg-agent")
+        }
 
-            var started by liveVarOf<Boolean?>(null)
-            var connectResult by liveVarOf<ProcessResult?>(null)
-            section {
-                started?.let {
-                    if (it) {
-                        green { textLine("GPG agent started successfully!") }
-                        green { textLine("GPG agent reset complete") }
-                    } else {
-                        red {
-                            textLine("Failed to start GPG agent")
-                            if (connectResult!! is ProcessResult.Failure) {
-                                textLine("Connect error: ${connectResult!!.output}")
-                            }
-                        }
+        var connectResult by liveVarOf<ProcessResult?>(null)
+        section {
+            connectResult?.let {
+                if (it.success) {
+                    green { textLine("GPG agent started successfully!") }
+                    green { textLine("GPG agent reset complete") }
+                } else {
+                    red {
+                        textLine("Failed to start GPG agent")
+                        if (it.message.isNotEmpty()) textLine("Connect error: ${it.message}")
                     }
-                } ?: run {
-                    yellow { textLine("Starting new GPG agent...") }
                 }
-            }.run {
-                connectResult = executeCommand("gpg-connect-agent", "/bye")
-                started = connectResult!! is ProcessResult.Success
+            } ?: run {
+                yellow { textLine("Starting new GPG agent...") }
             }
-        } catch (e: Exception) {
-            section { red { textLine("Error resetting GPG agent: ${e.message}") } }.run()
+        }.run {
+            connectResult = runCommand("gpg-connect-agent", "/bye")
         }
     }
 }

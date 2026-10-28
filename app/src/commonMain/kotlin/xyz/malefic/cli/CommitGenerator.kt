@@ -16,40 +16,36 @@ import xyz.malefic.cli.cmd.gpg.GpgCommand
  *
  * @param args The command-line arguments passed to the application.
  */
-fun main(args: Array<String>) =
+fun main(args: Array<String>) {
+    val name = args.getOrNull(0) ?: "commit"
+    val commandArgs = if (args.isNotEmpty()) args.drop(1).toTypedArray() else emptyArray()
+
+    val command =
+        when (name) {
+            "commit" -> CommitCommand()
+            "create" -> CreateCommand()
+            "gpg" -> GpgCommand()
+            else -> null
+        }
+
     session {
-        val command = args.getOrNull(0) ?: "commit"
-        val commandArgs = if (args.isNotEmpty()) args.drop(1).toTypedArray() else emptyArray()
-
-        when (command) {
-            "commit" -> {
-                with(CommitCommand()) {
-                    this@session.execute(commandArgs)
-                }
+        when {
+            command != null -> {
+                with(command) { this@session.execute(commandArgs) }
             }
 
-            "create" -> {
-                with(CreateCommand()) {
-                    this@session.execute(commandArgs)
-                }
-            }
-
-            "gpg" -> {
-                with(GpgCommand()) {
-                    this@session.execute(commandArgs)
-                }
-            }
-
-            "help", "--help", "-h" -> {
+            name in listOf("help", "--help", "-h") -> {
                 showHelp()
             }
 
             else -> {
-                println("Unknown command: $command")
+                println("Unknown command: $name")
                 println("Use 'kommit help' for available commands")
             }
         }
     }
+    command?.runDeferred()
+}
 
 private fun Session.showHelp() {
     section {

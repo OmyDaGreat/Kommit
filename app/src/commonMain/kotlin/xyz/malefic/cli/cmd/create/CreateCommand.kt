@@ -21,7 +21,6 @@ import xyz.malefic.cli.cmd.create.ConfigYaml.defaultTypeNames
 import xyz.malefic.cli.cmd.create.ConfigYaml.nameRegex
 import xyz.malefic.cli.cmd.create.ConfigYaml.standardTypes
 import xyz.malefic.cli.cmd.create.ConfigYaml.toYaml
-import xyz.malefic.cli.cmd.util.ProcessResult
 import xyz.malefic.cli.cmd.util.readConfirm
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputRetry
@@ -193,28 +192,18 @@ class CreateCommand : BaseCommand() {
         ).distinct() - exclude.toSet()
     }
 
+    private val headerRegex = Regex("""^([A-Za-z]+)\(([^)]+)\)!?:""")
+
     private fun scopesFromHistory(): Map<String, Set<String>> =
-        try {
-            val result = git("log", "--format=%s", "-n", "500")
-            if (result is ProcessResult.Success) {
-                val header = Regex("""^([A-Za-z]+)\(([^)]+)\)!?:""")
-                val uses =
-                    result.output
-                        .lines()
-                        .mapNotNull { header.find(it)?.destructured }
-                        .map { (type, scope) -> scope.trim() to type }
-                        .filter { (scope, _) -> scope.matches(nameRegex) }
-                uses
-                    .groupBy({ it.first }, { it.second })
-                    .entries
-                    .sortedByDescending { it.value.size }
-                    .associate { (scope, types) -> scope to types.toSet() }
-            } else {
-                emptyMap()
-            }
-        } catch (_: Exception) {
-            emptyMap()
-        }
+        git("log", "--format=%s", "-n", "500")
+            .lines
+            .mapNotNull { headerRegex.find(it)?.destructured }
+            .map { (type, scope) -> scope.trim() to type }
+            .filter { (scope, _) -> scope.matches(nameRegex) }
+            .groupBy({ it.first }, { it.second })
+            .entries
+            .sortedByDescending { it.value.size }
+            .associate { (scope, types) -> scope to types.toSet() }
 
     private fun Session.askOptions(): KommitOptions.ResolvedOptions {
         step(3, "Options")

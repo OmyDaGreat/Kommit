@@ -3,62 +3,57 @@
 package xyz.malefic.cli.cmd.util
 
 import com.kgit2.kommand.process.Command
+import com.kgit2.kommand.process.Stdio
 
 /**
- * Cross-platform process execution utility
- * Uses kommand library for proper stdout/stderr capture
+ * The outcome of running an external command. [exitCode] is -1 if the command could not be started
+ * or was killed by a signal.
  */
-fun executeCommand(vararg command: String): ProcessResult {
-    return try {
-        if (command.isEmpty()) {
-            return ProcessResult.Failure("No command provided")
-        }
+data class ProcessResult(
+    val exitCode: Int,
+    val stdout: String = "",
+    val stderr: String = "",
+) {
+    val success get() = exitCode == 0
 
-        val baseCommand = command[0]
-        val args = command.drop(1)
+    /** The text worth showing the user: stdout on success, otherwise stderr (or stdout if stderr is empty). */
+    val message get() = (if (success) stdout else stderr.ifBlank { stdout }).trim()
 
-        val cmd = Command(baseCommand)
-        if (args.isNotEmpty()) {
-            cmd.args(*args.toTypedArray())
-        }
-
-        val result = cmd.output()
-
-        if (result.status == 0) {
-            ProcessResult.Success(result.stdout.orEmpty())
-        } else {
-            ProcessResult.Failure(
-                output = result.stdout.orEmpty(),
-            )
-        }
-    } catch (e: Exception) {
-        try {
-            val commandString = command.joinToString(" ")
-            val exitCode = platform.posix.system(commandString)
-
-            if (exitCode == 0) {
-                ProcessResult.Success(output = "Command executed successfully")
-            } else {
-                ProcessResult.Failure(
-                    output = "Command failed with exit code $exitCode: ${e.message}",
-                )
-            }
-        } catch (fallbackError: Exception) {
-            ProcessResult.Failure(
-                output = "Command execution failed: ${e.message}, fallback failed: ${fallbackError.message}",
-            )
-        }
-    }
+    /** Non-blank lines of stdout, or an empty list if the command failed. */
+    val lines get() = if (success) stdout.lines().filter { it.isNotBlank() } else emptyList()
 }
 
-sealed class ProcessResult(
-    open val output: String,
-) {
-    data class Failure(
-        override val output: String,
-    ) : ProcessResult(output)
+/**
+ * Run a command and capture its output. Stdin is closed, so the command can never block on or read
+ * from the terminal Kotter is using.
+ *
+ * Output must not contain NUL bytes: kommand passes it through a C string and aborts the process
+ * otherwise, so avoid flags like `git -z`.
+ */
+fun runCommand(vararg command: String): ProcessResult =
+    spawn(command) {
+        stdin(Stdio.Null).stdout(Stdio.Pipe).stderr(Stdio.Pipe).output().let {
+            ProcessResult(it.status ?: -1, it.stdout.orEmpty(), it.stderr.orEmpty())
+        }
+    }
 
-    data class Success(
-        override val output: String,
-    ) : ProcessResult(output)
+/**
+ * Run a command attached to the real terminal, so it can prompt the user (pinentry, credentials, editors).
+ * Must not be called while a Kotter session is active — see [xyz.malefic.cli.cmd.BaseCommand.afterSession].
+ */
+fun runInteractive(vararg command: String): ProcessResult =
+    spawn(command) {
+        ProcessResult(stdin(Stdio.Inherit).stdout(Stdio.Inherit).stderr(Stdio.Inherit).status())
+    }
+
+private inline fun spawn(
+    command: Array<out String>,
+    block: Command.() -> ProcessResult,
+): ProcessResult {
+    if (command.isEmpty()) return ProcessResult(-1, stderr = "No command provided")
+    return try {
+        Command(command[0]).args(command.drop(1)).block()
+    } catch (e: Exception) {
+        ProcessResult(-1, stderr = "Could not run '${command[0]}': ${e.message}")
+    }
 }

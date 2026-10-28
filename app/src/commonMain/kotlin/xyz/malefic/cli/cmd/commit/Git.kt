@@ -1,22 +1,20 @@
 package xyz.malefic.cli.cmd.commit
 
-import com.varabyte.kotter.foundation.text.red
-import com.varabyte.kotter.foundation.text.textLine
-import com.varabyte.kotter.foundation.text.yellow
-import com.varabyte.kotter.runtime.MainRenderScope
-import com.varabyte.kotter.runtime.Session
-import xyz.malefic.cli.cmd.util.ProcessResult
-import xyz.malefic.cli.cmd.util.executeCommand
-import xyz.malefic.cli.cmd.util.readMultiSelect
+import xyz.malefic.cli.cmd.util.runCommand
+import xyz.malefic.cli.cmd.util.runInteractive
 
 /**
- * Execute a git command with the specified arguments
+ * Execute a git command with the specified arguments, capturing its output
  */
-fun git(vararg args: String) = executeCommand("git", *args)
+fun git(vararg args: String) = runCommand("git", *args)
 
 object Git {
     /**
      * A file with changes in the index and/or working tree. [paths] holds both sides of a rename.
+     *
+     * @param status The status of the file.
+     * @param paths The paths of the file, if it's a rename.
+     * @param staged Whether the file is staged in the index.
      */
     data class ChangedFile(
         val status: String,
@@ -26,144 +24,70 @@ object Git {
         val display get() = "$status ${paths.joinToString(" <- ")}"
     }
 
-    fun Session.commitChanges(message: String): Boolean =
-        try {
-            val result = git("commit", "-m", message)
-            if (result is ProcessResult.Success) {
-                section {
-                    textLine("Commit created successfully!")
-                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
-                }.run()
-                true
-            } else {
-                section {
-                    red {
-                        textLine("Failed to create commit.")
-                        textLine(result.output)
-                    }
-                }.run()
-                false
-            }
-        } catch (e: Exception) {
-            section {
-                red { textLine("Error creating commit: ${e.message}") }
-            }.run()
-            false
-        }
+    fun getStagedFiles() = git("diff", "--cached", "--name-only").lines
 
-    fun Session.pushChanges() {
-        try {
-            section {
-                textLine("Pushing changes (autoPush enabled)...")
-            }.run()
-            val result = git("push")
-            if (result is ProcessResult.Success) {
-                section {
-                    textLine("Push successful.")
-                    yellow { if (result.output.isNotEmpty()) textLine(result.output) }
-                }.run()
-            } else {
-                section {
-                    red {
-                        textLine("Push failed")
-                        textLine(result.output)
-                    }
-                }.run()
-            }
-        } catch (e: Exception) {
-            section {
-                red { textLine("Error pushing changes: ${e.message}") }
-            }.run()
-        }
-    }
+    fun stageAll() = git("add", ".")
 
-    fun getStagedFiles(): List<String> =
-        try {
-            val result = git("diff", "--cached", "--name-only")
-            if (result is ProcessResult.Success) {
-                result.output.lines().mapNotNull { it.trim().ifEmpty { null } }
-            } else {
-                emptyList()
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
+    fun stage(paths: List<String>) = git("add", "-A", "--", *paths.toTypedArray())
 
-    fun MainRenderScope.stageAll(onError: () -> Unit) {
-        try {
-            val result = git("add", ".")
-            if (result is ProcessResult.Failure) {
-                red {
-                    textLine("Failed to stage changes automatically.")
-                    if (result.output.isNotEmpty()) textLine(result.output)
-                }
-                onError()
-            }
-        } catch (e: Exception) {
-            red { textLine("Error staging changes: ${e.message}") }
-            onError()
-        }
-    }
+    fun unstage(paths: List<String>) = git("reset", "-q", "--", *paths.toTypedArray())
 
     fun getChangedFiles(): List<ChangedFile> =
-        try {
-            val result = git("status", "--porcelain=v1", "-z", "--untracked-files=all")
-            if (result is ProcessResult.Success) {
-                val entries = result.output.split('\u0000').iterator()
-                buildList {
-                    while (entries.hasNext()) {
-                        val entry = entries.next()
-                        if (entry.length < 4) continue
-                        val status = entry.take(2)
-                        val paths = mutableListOf(entry.drop(3))
-                        if ('R' in status || 'C' in status) {
-                            if (entries.hasNext()) paths += entries.next()
-                        }
-                        add(ChangedFile(status, paths, status[0] != ' ' && status[0] != '?'))
-                    }
-                }
-            } else {
-                emptyList()
-            }
-        } catch (_: Exception) {
-            emptyList()
+        git("-c", "core.quotePath=false", "status", "--porcelain=v1", "--untracked-files=all").lines.map { line ->
+            val status = line.take(2)
+            val (first, rest) = parsePorcelainPath(line, 3)
+            val paths = if (rest.startsWith(" -> ")) listOf(parsePorcelainPath(rest, 4).first, first) else listOf(first)
+            ChangedFile(status, paths, status[0] != ' ' && status[0] != '?')
         }
+
+    /** Commit attached to the terminal, so GPG signing can prompt for a passphrase. Run outside the Kotter session. */
+    fun commit(message: String) = runInteractive("git", "commit", "-m", message)
+
+    /** Push attached to the terminal, so git can prompt for credentials. Run outside the Kotter session. */
+    fun push() = runInteractive("git", "push")
 
     /**
-     * Let the user pick which changed files to commit, then stage the picked ones and unstage the rest.
-     * Returns false if nothing was selected or git failed.
+     * Read one path from porcelain output starting at [start], undoing git's C-style quoting.
+     * Returns the path and whatever text follows it.
      */
-    fun Session.reviewStaging(): Boolean {
-        val files = getChangedFiles()
-        if (files.isEmpty()) {
-            section { red { textLine("No changes to commit.") } }.run()
-            return false
+    private fun parsePorcelainPath(
+        text: String,
+        start: Int,
+    ): Pair<String, String> {
+        if (text.getOrNull(start) != '"') {
+            val end = text.indexOf(" -> ", start).takeIf { it >= 0 } ?: text.length
+            return text.substring(start, end) to text.substring(end)
         }
-        val initiallySelected =
-            files.indices
-                .filter { files[it].staged }
-                .toSet()
-                .ifEmpty { files.indices.toSet() }
-        val selected = readMultiSelect("\nSelect the files to stage and commit:", files.map { it.display }, initiallySelected)
-        if (selected.isEmpty()) {
-            section { yellow { textLine("No files selected.") } }.run()
-            return false
-        }
-
-        val toStage = files.filterIndexed { i, _ -> i in selected }.flatMap { it.paths }
-        val toUnstage = files.filterIndexed { i, f -> i !in selected && f.staged }.flatMap { it.paths }
-        val results =
-            listOfNotNull(
-                if (toStage.isNotEmpty()) git("add", "-A", "--", *toStage.toTypedArray()) else null,
-                if (toUnstage.isNotEmpty()) git("reset", "-q", "--", *toUnstage.toTypedArray()) else null,
-            )
-        val failure = results.firstOrNull { it is ProcessResult.Failure } ?: return true
-        section {
-            red {
-                textLine("Failed to update staged files.")
-                if (failure.output.isNotEmpty()) textLine(failure.output)
+        val bytes = mutableListOf<Byte>()
+        var i = start + 1
+        while (i < text.length && text[i] != '"') {
+            if (text[i] == '\\' && i + 1 < text.length) {
+                val c = text[++i]
+                if (c in '0'..'7') {
+                    val octal = text.substring(i, minOf(i + 3, text.length))
+                    bytes += octal.toInt(8).toByte()
+                    i += 3
+                    continue
+                }
+                bytes +=
+                    when (c) {
+                        'n' -> '\n'
+                        't' -> '\t'
+                        'r' -> '\r'
+                        'a' -> '\u0007'
+                        'b' -> '\b'
+                        'f' -> '\u000C'
+                        'v' -> '\u000B'
+                        else -> c
+                    }.code.toByte()
+            } else {
+                val end = (i until text.length).firstOrNull { text[it] == '\\' || text[it] == '"' } ?: text.length
+                bytes += text.substring(i, end).encodeToByteArray().toList()
+                i = end
+                continue
             }
-        }.run()
-        return false
+            i++
+        }
+        return bytes.toByteArray().decodeToString() to text.substring(minOf(i + 1, text.length))
     }
 }

@@ -8,17 +8,19 @@ import com.varabyte.kotter.foundation.text.yellow
 import com.varabyte.kotter.runtime.MainRenderScope
 import com.varabyte.kotter.runtime.Session
 import xyz.malefic.cli.cmd.BaseCommand
-import xyz.malefic.cli.cmd.commit.Git.commitChanges
+import xyz.malefic.cli.cmd.commit.Git.commit
 import xyz.malefic.cli.cmd.commit.Git.getChangedFiles
 import xyz.malefic.cli.cmd.commit.Git.getStagedFiles
-import xyz.malefic.cli.cmd.commit.Git.pushChanges
-import xyz.malefic.cli.cmd.commit.Git.reviewStaging
+import xyz.malefic.cli.cmd.commit.Git.push
+import xyz.malefic.cli.cmd.commit.Git.stage
 import xyz.malefic.cli.cmd.commit.Git.stageAll
+import xyz.malefic.cli.cmd.commit.Git.unstage
 import xyz.malefic.cli.cmd.commit.Parsing.KommitConfig
 import xyz.malefic.cli.cmd.commit.Parsing.StageMode
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
+import xyz.malefic.cli.cmd.util.readMultiSelect
 import xyz.malefic.cli.cmd.util.readMultilineInput
 
 class CommitCommand : BaseCommand() {
@@ -63,35 +65,7 @@ class CommitCommand : BaseCommand() {
         if (error) return
 
         val options = config.options
-        section {
-            when (options.stageMode) {
-                StageMode.NONE -> {
-                    if (getStagedFiles().isEmpty()) {
-                        red {
-                            textLine(
-                                "No staged changes detected. Stage changes first (set the stageMode option to 'auto' or 'review' to stage from Kommit).",
-                            )
-                        }
-                        error = true
-                    }
-                }
-
-                StageMode.REVIEW -> {
-                    if (getChangedFiles().isEmpty()) {
-                        red { textLine("No changes to commit.") }
-                        error = true
-                    }
-                }
-
-                StageMode.AUTO -> {
-                    if (getStagedFiles().isEmpty()) {
-                        textLine("No staged changes. Auto-staging all changes (configured)...")
-                        stageAll { error = true }
-                    }
-                }
-            }
-        }.run()
-        if (error) return
+        if (!checkStaging(options.stageMode)) return
 
         val selectedType = readInputOptions("\nSelect the type of change: ", *config.types.map { it.type }.toTypedArray())
 
@@ -207,11 +181,83 @@ class CommitCommand : BaseCommand() {
                 section { yellow { textLine("Commit aborted.") } }.run()
                 return
             }
-            if (commitChanges(commitMessage) && options.autoPush) {
-                pushChanges()
+            afterSession {
+                if (!commit(commitMessage).success) {
+                    println("Failed to create commit.")
+                    return@afterSession
+                }
+                println("Commit created successfully!")
+                if (options.autoPush) {
+                    println("Pushing changes (autoPush enabled)...")
+                    println(if (push().success) "Push successful." else "Push failed.")
+                }
             }
         } else {
             section { yellow { textLine("Commit aborted.") } }.run()
         }
+    }
+
+    /**
+     * Make sure there is something to commit for the given [mode], auto-staging if configured.
+     * Returns false (after reporting why) if the commit can't go ahead.
+     */
+    private fun Session.checkStaging(mode: StageMode): Boolean {
+        val issue =
+            when (mode) {
+                StageMode.NONE -> {
+                    "No staged changes detected. Stage changes first (set the stageMode option to 'auto' or 'review' to stage from Kommit)."
+                        .takeIf { getStagedFiles().isEmpty() }
+                }
+
+                StageMode.REVIEW -> {
+                    "No changes to commit.".takeIf { getChangedFiles().isEmpty() }
+                }
+
+                StageMode.AUTO -> {
+                    getStagedFiles().takeIf { it.isEmpty() }?.run {
+                        section { textLine("No staged changes. Auto-staging all changes (configured)...") }.run()
+                        stageAll().takeUnless { it.success }?.let { "Failed to stage changes automatically.\n${it.message}".trim() }
+                    }
+                }
+            } ?: return true
+        section { red { textLine(issue) } }.run()
+        return false
+    }
+
+    /**
+     * Let the user pick which changed files to commit, then stage the picked ones and unstage the rest.
+     * Returns false if nothing was selected or git failed.
+     */
+    private fun Session.reviewStaging(): Boolean {
+        val files =
+            getChangedFiles().ifEmpty {
+                section { red { textLine("No changes to commit.") } }.run()
+                return false
+            }
+        val initiallySelected =
+            files.indices
+                .filter { files[it].staged }
+                .toSet()
+                .ifEmpty { files.indices.toSet() }
+        val selected =
+            readMultiSelect("\nSelect the files to stage and commit:", files.map { it.display }, initiallySelected).ifEmpty {
+                section { yellow { textLine("No files selected.") } }.run()
+                return false
+            }
+
+        val toStage = selected.map { files[it].paths.first() }
+        val toUnstage = files.flatMapIndexed { i, f -> if (i !in selected && f.staged) f.paths else emptyList() }
+        val failure =
+            listOfNotNull(
+                if (toStage.isNotEmpty()) stage(toStage) else null,
+                if (toUnstage.isNotEmpty()) unstage(toUnstage) else null,
+            ).firstOrNull { !it.success } ?: return true
+        section {
+            red {
+                textLine("Failed to update staged files.")
+                if (failure.message.isNotEmpty()) textLine(failure.message)
+            }
+        }.run()
+        return false
     }
 }

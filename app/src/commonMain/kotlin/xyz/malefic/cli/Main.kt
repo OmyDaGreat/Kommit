@@ -18,6 +18,12 @@ import xyz.malefic.cli.cmd.gpg.GpgCommand
  */
 fun main(args: Array<String>) {
     val name = args.getOrNull(0) ?: "commit"
+
+    if (name in listOf("version", "--version", "-v")) {
+        println("kommit $VERSION")
+        return
+    }
+
     val commandArgs = if (args.isNotEmpty()) args.drop(1).toTypedArray() else emptyArray()
 
     val command =
@@ -58,5 +64,6 @@ private fun Session.showHelp() {
         textLine("  create  Interactively create a configuration file for Kommit")
         textLine("  gpg     GPG-related commands for managing and testing GPG signing")
         textLine("  help    Show this help message")
+        textLine("  version Show the installed version")
     }.run()
 }

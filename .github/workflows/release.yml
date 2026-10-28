@@ -18,99 +18,16 @@ defaults:
     shell: bash
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linuxX64
-            executable: app.kexe
-            artifact: kommit-linux-x64
-          - os: macos-latest
-            target: macosArm64
-            executable: app.kexe
-            artifact: kommit-macos-arm64
-          - os: windows-latest
-            target: mingwX64
-            executable: app.exe
-            artifact: kommit-windows-x64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Set up JDK 21 for Gradle
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '27'
-          cache: gradle
-      - name: Setup Kotlin
-        uses: fwilhe2/setup-kotlin@v2.1
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-      - name: Determine Version
-        id: version
-        run: |
-          git fetch --tags
-          latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
-          if [ -z "$latest_tag" ]; then
-            latest_version="0.1.0"
-          else
-            latest_version="${latest_tag#v}"
-          fi
-          IFS='.' read -r major minor patch <<< "$latest_version"
-          bump_type="${{ github.event.inputs.version_bump || 'patch' }}"
-          if [ "$bump_type" == "major" ]; then
-            major=$((major + 1)); minor=0; patch=0
-          elif [ "$bump_type" == "minor" ]; then
-            minor=$((minor + 1)); patch=0
-          else
-            patch=$((patch + 1))
-          fi
-          new_version="$major.$minor.$patch"
-          echo "version=$new_version" >> $GITHUB_OUTPUT
-          echo "tag=v$new_version" >> $GITHUB_OUTPUT
-      - name: Make Gradlew executable
-        run: chmod +x gradlew
-      - name: Build Native Binary
-        run: ./gradlew :app:linkReleaseExecutable${{ matrix.target }}
-      - name: Prepare Binary
-        run: |
-          mkdir -p dist
-          cp app/build/bin/${{ matrix.target }}/releaseExecutable/${{ matrix.executable }} dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
-      - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
-          retention-days: 1
-
-  release:
-    needs: build
+  version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Determine Version
         id: version
@@ -146,6 +63,72 @@ jobs:
           echo "New version: $new_version"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "tag=v$new_version" >> $GITHUB_OUTPUT
+
+  build:
+    needs: version
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linuxX64
+            executable: app.kexe
+            artifact: kommit-linux-x64
+          - os: macos-latest
+            target: macosArm64
+            executable: app.kexe
+            artifact: kommit-macos-arm64
+          - os: windows-latest
+            target: mingwX64
+            executable: app.exe
+            artifact: kommit-windows-x64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 21 for Gradle
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '27'
+          cache: gradle
+      - name: Setup Kotlin
+        uses: fwilhe2/setup-kotlin@v2.1
+      - name: Make Gradlew executable
+        run: chmod +x gradlew
+      - name: Build Native Binary
+        run: ./gradlew :app:linkReleaseExecutable${{ matrix.target }} -PkommitVersion=${{ needs.version.outputs.version }}
+      - name: Prepare Binary
+        run: |
+          mkdir -p dist
+          cp app/build/bin/${{ matrix.target }}/releaseExecutable/${{ matrix.executable }} dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
+          retention-days: 1
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
 
       - name: Generate Changelog
         id: changelog
@@ -210,13 +193,13 @@ jobs:
         run: |
           cat > kommit.json << EOF
           {
-              "version": "${{ steps.version.outputs.version }}",
+              "version": "${{ needs.version.outputs.version }}",
               "description": "A Kotlin-based conventional commit message generator",
               "homepage": "https://github.com/OmyDaGreat/Kommit",
               "license": "MIT",
               "architecture": {
                   "64bit": {
-                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-windows-x64.exe",
+                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-windows-x64.exe",
                       "hash": "${{ steps.checksums.outputs.windows_sha256 }}",
                       "bin": [["kommit-windows-x64.exe", "kommit"]]
                   }
@@ -238,7 +221,7 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: OmyDaGreat/MaleficBucket
           event-type: update-kommit
-          client-payload: '{"version": "${{ steps.version.outputs.version }}", "windows_sha256": "${{ steps.checksums.outputs.windows_sha256 }}", "tag": "${{ steps.version.outputs.tag }}"}'
+          client-payload: '{"version": "${{ needs.version.outputs.version }}", "windows_sha256": "${{ steps.checksums.outputs.windows_sha256 }}", "tag": "${{ needs.version.outputs.tag }}"}'
 
       - name: Update Homebrew Formula
         run: |
@@ -251,13 +234,13 @@ jobs:
             desc "A conventional commit generator made with Kotlin!"
             homepage "https://github.com/OmyDaGreat/Kommit"
             license "MIT"
-            version "${{ steps.version.outputs.tag }}"
+            version "${{ needs.version.outputs.tag }}"
           
             if OS.mac? && Hardware::CPU.arm?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-macos-arm64"
               sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
             elsif OS.linux?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64"
+              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-linux-x64"
               sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
             end
           
@@ -270,7 +253,7 @@ jobs:
             end
           
             test do
-              system "#{bin}/kommit", "--help"
+              system "#{bin}/kommit", "--version"
             end
           end
           EOF
@@ -278,7 +261,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/kommit.rb
-          git commit -m "Update kommit formula to ${{ steps.version.outputs.version }} with native binaries"
+          git commit -m "Update kommit formula to ${{ needs.version.outputs.version }} with native binaries"
           git push
 
       - name: Create GitHub Release
@@ -287,10 +270,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.version }}
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: Release ${{ needs.version.outputs.version }}
           body: |
-            # Kommit ${{ steps.version.outputs.version }}
+            # Kommit ${{ needs.version.outputs.version }}
 
             Released on ${{ steps.date.outputs.date }}.
 
@@ -315,9 +298,9 @@ jobs:
 
             ### Manual Installation
             Download the appropriate binary for your platform from the list below:
-            - **Linux x64**: [kommit-linux-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-linux-x64)
-            - **macOS ARM64**: [kommit-macos-arm64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-macos-arm64)
-            - **Windows x64**: [kommit-windows-x64.exe](https://github.com/OmyDaGreat/Kommit/releases/download/${{ steps.version.outputs.tag }}/kommit-windows-x64.exe)
+            - **Linux x64**: [kommit-linux-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-linux-x64)
+            - **macOS ARM64**: [kommit-macos-arm64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-macos-arm64)
+            - **Windows x64**: [kommit-windows-x64.exe](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-windows-x64.exe)
 
             ## Verification
 

@@ -13,12 +13,25 @@ on:
           - minor
           - major
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 defaults:
   run:
     shell: bash
 
 jobs:
+  ci:
+    name: Build and Test
+    uses: ./.github/workflows/build-test.yml
+
   version:
+    name: Determine Version
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -32,7 +45,6 @@ jobs:
       - name: Determine Version
         id: version
         run: |
-          # Get the latest tag or default to 0.1.0 if no tags exist
           git fetch --tags
           latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
 
@@ -42,93 +54,99 @@ jobs:
             latest_version="${latest_tag#v}"
           fi
 
-          # Split version into major, minor, patch
           IFS='.' read -r major minor patch <<< "$latest_version"
 
-          # Bump version based on input or default to patch
-          bump_type="${{ github.event.inputs.version_bump || 'patch' }}"
-
-          if [ "$bump_type" == "major" ]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif [ "$bump_type" == "minor" ]; then
-            minor=$((minor + 1))
-            patch=0
-          else
-            patch=$((patch + 1))
-          fi
+          case "${{ github.event.inputs.version_bump || 'patch' }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *) patch=$((patch + 1)) ;;
+          esac
 
           new_version="$major.$minor.$patch"
           echo "New version: $new_version"
-          echo "version=$new_version" >> $GITHUB_OUTPUT
-          echo "tag=v$new_version" >> $GITHUB_OUTPUT
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$new_version" >> "$GITHUB_OUTPUT"
 
   build:
+    name: Build ${{ matrix.native }}
     needs: version
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
     strategy:
+      fail-fast: true
       matrix:
         include:
           - os: ubuntu-latest
             target: linuxX64
-            executable: app.kexe
-            artifact: kommit-linux-x64
+            native: linux-x64
           - os: macos-latest
             target: macosArm64
-            executable: app.kexe
-            artifact: kommit-macos-arm64
+            native: macos-arm64
           - os: windows-latest
             target: mingwX64
-            executable: app.exe
-            artifact: kommit-windows-x64
+            native: windows-x64
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+
       - name: Set up JDK 27 for Gradle
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '27'
-          cache: gradle
-      - name: Setup Kotlin
-        uses: fwilhe2/setup-kotlin@v2.1
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
       - name: Make Gradlew executable
         run: chmod +x gradlew
-      - name: Build Native Binary
+
+      - name: Build native binary
         run: ./gradlew :app:linkReleaseExecutable${{ matrix.target }} -PkommitVersion=${{ needs.version.outputs.version }}
-      - name: Prepare Binary
+
+      - name: Package native binary
+        working-directory: app/build/bin/${{ matrix.target }}/releaseExecutable
         run: |
-          mkdir -p dist
-          cp app/build/bin/${{ matrix.target }}/releaseExecutable/${{ matrix.executable }} dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
-      - name: Upload Binary Artifact
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          if [ -f app.exe ]; then
+            mv app.exe kommit.exe
+            7z a "$GITHUB_WORKSPACE/dist/kommit-${{ matrix.native }}.zip" kommit.exe
+          else
+            mv app.kexe kommit
+            chmod +x kommit
+            tar -czf "$GITHUB_WORKSPACE/dist/kommit-${{ matrix.native }}.tar.gz" kommit
+          fi
+
+      - name: Upload native binary
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.artifact }}
-          path: dist/kommit${{ matrix.target == 'mingwX64' && '.exe' || '' }}
+          name: kommit-${{ matrix.native }}
+          path: dist/*
+          if-no-files-found: error
           retention-days: 1
 
   release:
+    name: Create GitHub Release
     needs: [version, build]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    if: github.ref == 'refs/heads/main'
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download native binaries
         uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          pattern: kommit-*
+          path: dist
+          merge-multiple: true
 
       - name: Generate Changelog
         id: changelog
@@ -136,10 +154,8 @@ jobs:
           latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
 
           if [ -z "$latest_tag" ]; then
-            echo "No previous tags found, including all commits in changelog"
             range=HEAD
           else
-            echo "Getting commits since $latest_tag"
             range="${latest_tag}..HEAD"
           fi
 
@@ -157,122 +173,29 @@ jobs:
             echo 'CHANGELOG_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Prepare Release Files
-        run: |
-          mkdir -p release
-          
-          # Copy binaries and rename them appropriately
-          cp artifacts/kommit-linux-x64/kommit release/kommit-linux-x64
-          cp artifacts/kommit-macos-arm64/kommit release/kommit-macos-arm64
-          cp artifacts/kommit-windows-x64/kommit.exe release/kommit-windows-x64.exe
-          
-          # Copy additional files if they exist
-          cp LICENSE release/ || echo "LICENSE file not found"
-          cp README.adoc release/ || echo "README.adoc file not found"
-          cp .kommit.yaml release/ || echo ".kommit.yaml file not found"
-
       - name: Calculate SHA256 checksums
         id: checksums
+        working-directory: dist
         run: |
-          cd release
-          sha256sum kommit-linux-x64 > checksums.txt
-          sha256sum kommit-macos-arm64 >> checksums.txt
-          sha256sum kommit-windows-x64.exe >> checksums.txt
-          
-          # Get individual checksums for package managers
-          linux_sha=$(sha256sum kommit-linux-x64 | awk '{print $1}')
-          macos_arm64_sha=$(sha256sum kommit-macos-arm64 | awk '{print $1}')
-          windows_sha=$(sha256sum kommit-windows-x64.exe | awk '{print $1}')
-          
-          echo "linux_sha256=$linux_sha" >> $GITHUB_OUTPUT
-          echo "macos_arm64_sha256=$macos_arm64_sha" >> $GITHUB_OUTPUT
-          echo "windows_sha256=$windows_sha" >> $GITHUB_OUTPUT
-
-      - name: Create Scoop Manifest
-        run: |
-          cat > kommit.json << EOF
+          sha256sum kommit-*.tar.gz kommit-*.zip > checksums.txt
+          cat checksums.txt
           {
-              "version": "${{ needs.version.outputs.version }}",
-              "description": "A Kotlin-based conventional commit message generator",
-              "homepage": "https://github.com/OmyDaGreat/Kommit",
-              "license": "MIT",
-              "architecture": {
-                  "64bit": {
-                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-windows-x64.exe",
-                      "hash": "${{ steps.checksums.outputs.windows_sha256 }}",
-                      "bin": [["kommit-windows-x64.exe", "kommit"]]
-                  }
-              },
-              "checkver": "github",
-              "autoupdate": {
-                  "architecture": {
-                      "64bit": {
-                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-windows-x64.exe"
-                      }
-                  }
-              }
-          }
-          EOF
+            echo 'list<<CHECKSUMS_EOF'
+            cat checksums.txt
+            echo 'CHECKSUMS_EOF'
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Update Scoop Bucket
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: OmyDaGreat/MaleficBucket
-          event-type: update-kommit
-          client-payload: '{"version": "${{ needs.version.outputs.version }}", "windows_sha256": "${{ steps.checksums.outputs.windows_sha256 }}", "tag": "${{ needs.version.outputs.tag }}"}'
-
-      - name: Update Homebrew Formula
-        run: |
-          git clone https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/OmyDaGreat/homebrew-malefic.git
-          cd homebrew-malefic
-          
-          # Create new formula for native binaries
-          cat > Formula/kommit.rb << 'EOF'
-          class Kommit < Formula
-            desc "A conventional commit generator made with Kotlin!"
-            homepage "https://github.com/OmyDaGreat/Kommit"
-            license "MIT"
-            version "${{ needs.version.outputs.tag }}"
-          
-            if OS.mac? && Hardware::CPU.arm?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-macos-arm64"
-              sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
-            elsif OS.linux?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-linux-x64"
-              sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
-            end
-          
-            def install
-              if OS.mac? && Hardware::CPU.arm?
-                bin.install "kommit-macos-arm64" => "kommit"
-              elsif OS.linux?
-                bin.install "kommit-linux-x64" => "kommit"
-              end
-            end
-          
-            test do
-              system "#{bin}/kommit", "--version"
-            end
-          end
-          EOF
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/kommit.rb
-          git commit -m "Update kommit formula to ${{ needs.version.outputs.version }} with native binaries"
-          git push
+      - name: Get release date
+        id: date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          name: Release ${{ needs.version.outputs.version }}
+          tag_name: ${{ env.TAG }}
+          name: Release ${{ env.VERSION }}
           body: |
-            # Kommit ${{ needs.version.outputs.version }}
+            # Kommit ${{ env.VERSION }}
 
             Released on ${{ steps.date.outputs.date }}.
 
@@ -285,7 +208,6 @@ jobs:
 
             ### Using Homebrew (macOS/Linux)
             ```bash
-            brew tap OmyDaGreat/malefic
             brew install OmyDaGreat/malefic/kommit
             ```
 
@@ -296,18 +218,16 @@ jobs:
             ```
 
             ### Manual Installation
-            Download the appropriate binary for your platform from the list below:
-            - **Linux x64**: [kommit-linux-x64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-linux-x64)
-            - **macOS ARM64**: [kommit-macos-arm64](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-macos-arm64)
-            - **Windows x64**: [kommit-windows-x64.exe](https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-windows-x64.exe)
+            Download the archive for your platform, extract it, and put `kommit` (or `kommit.exe`) on your PATH:
+            - **Linux x64**: [kommit-linux-x64.tar.gz](https://github.com/OmyDaGreat/Kommit/releases/download/${{ env.TAG }}/kommit-linux-x64.tar.gz)
+            - **macOS ARM64**: [kommit-macos-arm64.tar.gz](https://github.com/OmyDaGreat/Kommit/releases/download/${{ env.TAG }}/kommit-macos-arm64.tar.gz)
+            - **Windows x64**: [kommit-windows-x64.zip](https://github.com/OmyDaGreat/Kommit/releases/download/${{ env.TAG }}/kommit-windows-x64.zip)
 
             ## Verification
 
             ### SHA256 Checksums
             ```
-            Linux x64:   ${{ steps.checksums.outputs.linux_sha256 }}
-            macOS ARM64: ${{ steps.checksums.outputs.macos_arm64_sha256 }}
-            Windows x64: ${{ steps.checksums.outputs.windows_sha256 }}
+            ${{ steps.checksums.outputs.list }}
             ```
 
             ## Documentation
@@ -318,4 +238,131 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            release/*
+            dist/*
+            .kommit.yaml
+            LICENSE
+            README.adoc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  package-managers:
+    name: Update Homebrew Tap and Scoop Bucket
+    needs: [version, release]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      RELEASES: https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}
+      REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+    steps:
+      - name: Check for repository token
+        id: token
+        run: |
+          if [ -z "$REPO_ACCESS_TOKEN" ]; then
+            echo "::warning::REPO_ACCESS_TOKEN is not set; skipping Homebrew and Scoop updates."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download native binaries
+        if: steps.token.outputs.present == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: kommit-*
+          path: dist
+          merge-multiple: true
+
+      - name: Calculate SHA256 checksums
+        if: steps.token.outputs.present == 'true'
+        id: sha
+        working-directory: dist
+        run: |
+          echo "linux_x64=$(sha256sum kommit-linux-x64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64=$(sha256sum kommit-macos-arm64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "windows_x64=$(sha256sum kommit-windows-x64.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew formula
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/homebrew-malefic.git"
+          cd homebrew-malefic
+          mkdir -p Formula
+          cat > Formula/kommit.rb << EOF
+          class Kommit < Formula
+            desc "Conventional commit message generator driven by a YAML config"
+            homepage "https://github.com/OmyDaGreat/Kommit"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "${RELEASES}/kommit-macos-arm64.tar.gz"
+                sha256 "${{ steps.sha.outputs.macos_arm64 }}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "${RELEASES}/kommit-linux-x64.tar.gz"
+                sha256 "${{ steps.sha.outputs.linux_x64 }}"
+              end
+            end
+
+            def install
+              bin.install "kommit"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/kommit --version")
+            end
+          end
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/kommit.rb
+          if git diff --cached --quiet; then
+            echo "Homebrew formula already up to date."
+          else
+            git commit -m "kommit: update to ${VERSION}"
+            git push
+          fi
+
+      - name: Update Scoop manifest
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/MaleficBucket.git"
+          cd MaleficBucket
+          mkdir -p bucket
+          cat > bucket/kommit.json << EOF
+          {
+              "version": "${VERSION}",
+              "description": "Conventional commit message generator driven by a YAML config",
+              "homepage": "https://github.com/OmyDaGreat/Kommit",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "${RELEASES}/kommit-windows-x64.zip",
+                      "hash": "${{ steps.sha.outputs.windows_x64 }}"
+                  }
+              },
+              "bin": "kommit.exe",
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-windows-x64.zip"
+                      }
+                  }
+              }
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/kommit.json
+          if git diff --cached --quiet; then
+            echo "Scoop manifest already up to date."
+          else
+            git commit -m "kommit: update to ${VERSION}"
+            git push
+          fi

@@ -43,8 +43,8 @@ brew install omydagreat/malefic/kommit
 
 === Manual Installation
 
-1. Download the latest release from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]
-2. Extract the zip file
+1. Download the archive for your platform (`kommit-linux-x64.tar.gz`, `kommit-macos-arm64.tar.gz`, or `kommit-windows-x64.zip`) from the link:https://github.com/OmyDaGreat/Kommit/releases[GitHub Releases page]
+2. Extract it to get the `kommit` (or `kommit.exe`) executable
 3. Add the directory to your system PATH or create a symlink to the executable file
 
 == Quick Start

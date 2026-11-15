@@ -130,6 +130,10 @@ jobs:
         with:
           path: artifacts
 
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
       - name: Generate Changelog
         id: changelog
         run: |
@@ -188,81 +192,6 @@ jobs:
           echo "macos_arm64_sha256=$macos_arm64_sha" >> $GITHUB_OUTPUT
           echo "windows_sha256=$windows_sha" >> $GITHUB_OUTPUT
 
-      - name: Create Scoop Manifest
-        run: |
-          cat > kommit.json << EOF
-          {
-              "version": "${{ needs.version.outputs.version }}",
-              "description": "A Kotlin-based conventional commit message generator",
-              "homepage": "https://github.com/OmyDaGreat/Kommit",
-              "license": "MIT",
-              "architecture": {
-                  "64bit": {
-                      "url": "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-windows-x64.exe",
-                      "hash": "${{ steps.checksums.outputs.windows_sha256 }}",
-                      "bin": [["kommit-windows-x64.exe", "kommit"]]
-                  }
-              },
-              "checkver": "github",
-              "autoupdate": {
-                  "architecture": {
-                      "64bit": {
-                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-windows-x64.exe"
-                      }
-                  }
-              }
-          }
-          EOF
-
-      - name: Update Scoop Bucket
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: OmyDaGreat/MaleficBucket
-          event-type: update-kommit
-          client-payload: '{"version": "${{ needs.version.outputs.version }}", "windows_sha256": "${{ steps.checksums.outputs.windows_sha256 }}", "tag": "${{ needs.version.outputs.tag }}"}'
-
-      - name: Update Homebrew Formula
-        run: |
-          git clone https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/OmyDaGreat/homebrew-malefic.git
-          cd homebrew-malefic
-          
-          # Create new formula for native binaries
-          cat > Formula/kommit.rb << 'EOF'
-          class Kommit < Formula
-            desc "A conventional commit generator made with Kotlin!"
-            homepage "https://github.com/OmyDaGreat/Kommit"
-            license "MIT"
-            version "${{ needs.version.outputs.tag }}"
-          
-            if OS.mac? && Hardware::CPU.arm?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-macos-arm64"
-              sha256 "${{ steps.checksums.outputs.macos_arm64_sha256 }}"
-            elsif OS.linux?
-              url "https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}/kommit-linux-x64"
-              sha256 "${{ steps.checksums.outputs.linux_sha256 }}"
-            end
-          
-            def install
-              if OS.mac? && Hardware::CPU.arm?
-                bin.install "kommit-macos-arm64" => "kommit"
-              elsif OS.linux?
-                bin.install "kommit-linux-x64" => "kommit"
-              end
-            end
-          
-            test do
-              system "#{bin}/kommit", "--version"
-            end
-          end
-          EOF
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/kommit.rb
-          git commit -m "Update kommit formula to ${{ needs.version.outputs.version }} with native binaries"
-          git push
-
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v3
@@ -319,3 +248,116 @@ jobs:
           prerelease: false
           files: |
             release/*
+
+  package-managers:
+    name: Update Homebrew Tap and Scoop Bucket
+    needs: [version, release]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      RELEASES: https://github.com/OmyDaGreat/Kommit/releases/download/${{ needs.version.outputs.tag }}
+      REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+    steps:
+      - name: Check for repository token
+        id: token
+        run: |
+          if [ -z "$REPO_ACCESS_TOKEN" ]; then
+            echo "::warning::REPO_ACCESS_TOKEN is not set; skipping Homebrew and Scoop updates."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download native binaries
+        if: steps.token.outputs.present == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: kommit-*
+          path: artifacts
+
+      - name: Calculate SHA256 checksums
+        if: steps.token.outputs.present == 'true'
+        id: sha
+        working-directory: artifacts
+        run: |
+          echo "linux_x64=$(sha256sum kommit-linux-x64/kommit | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64=$(sha256sum kommit-macos-arm64/kommit | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "windows_x64=$(sha256sum kommit-windows-x64/kommit.exe | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew formula
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/homebrew-malefic.git"
+          cd homebrew-malefic
+          mkdir -p Formula
+          cat > Formula/kommit.rb << EOF
+          class Kommit < Formula
+            desc "Conventional commit generator made with Kotlin"
+            homepage "https://github.com/OmyDaGreat/Kommit"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "${RELEASES}/kommit-macos-arm64"
+                sha256 "${{ steps.sha.outputs.macos_arm64 }}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "${RELEASES}/kommit-linux-x64"
+                sha256 "${{ steps.sha.outputs.linux_x64 }}"
+              end
+            end
+
+            def install
+              bin.install Dir["kommit-*"].first => "kommit"
+            end
+
+            test do
+              system bin/"kommit", "--version"
+            end
+          end
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/kommit.rb
+          git commit -m "kommit: update to ${VERSION}"
+          git push
+
+      - name: Update Scoop manifest
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/MaleficBucket.git"
+          cd MaleficBucket
+          mkdir -p bucket
+          cat > bucket/kommit.json << EOF
+          {
+              "version": "${VERSION}",
+              "description": "A Kotlin-based conventional commit message generator",
+              "homepage": "https://github.com/OmyDaGreat/Kommit",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "${RELEASES}/kommit-windows-x64.exe",
+                      "hash": "${{ steps.sha.outputs.windows_x64 }}",
+                      "bin": [["kommit-windows-x64.exe", "kommit"]]
+                  }
+              },
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/OmyDaGreat/Kommit/releases/download/v\$version/kommit-windows-x64.exe"
+                      }
+                  }
+              }
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/kommit.json
+          git commit -m "kommit: update to ${VERSION}"
+          git push

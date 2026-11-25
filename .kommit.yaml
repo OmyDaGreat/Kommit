@@ -22,6 +22,7 @@ scopes:
     - gradle   # build scripts and wrapper
     - release  # packaging and publishing
     - docs     # README and other docs
+    - git      # .gitignore and other git config
   docs:
     - readme
 

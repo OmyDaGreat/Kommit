@@ -65,7 +65,8 @@ Kommit provides subcommands for generating commits, managing configuration, and
 working with GPG signing:
 
 === Commit Management
-* `kommit`/`kommit commit`: Generate a conventional commit message using the config file
+* `kommit`/`kommit commit`: Generate a conventional commit message using the config file. Types (with their descriptions) and scopes are picked from a list: type to filter, up/down to move, enter to select. When custom scopes are allowed, typing a name that isn't in the list offers it as a custom scope
+** `-t`/`--type TYPE` and `-s`/`--scope SCOPE` skip the matching prompt, e.g. `kommit -t feat -s cli` (use `-s ""` for no scope). Both are checked against the config before anything is staged
 * `kommit create`: Interactively create a `.kommit.yaml`, choosing commit types, scopes (suggested from your git history), and options. Use `--defaults` to skip the prompts and `--config PATH` to write elsewhere
 
 === GPG Management

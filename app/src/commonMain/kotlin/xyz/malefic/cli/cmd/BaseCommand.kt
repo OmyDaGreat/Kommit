@@ -56,13 +56,20 @@ abstract class BaseCommand {
     /**
      * Returns the path passed with -c/--config, or [DEFAULT_CONFIG_PATH].
      */
-    protected fun extractConfigPath(args: Array<String>): String {
-        val configIndex = args.indexOfFirst { it == "-c" || it == "--config" }
-        return if (configIndex >= 0 && configIndex + 1 < args.size) {
-            args[configIndex + 1]
-        } else {
-            DEFAULT_CONFIG_PATH
-        }
+    protected fun extractConfigPath(args: Array<String>) = extractOption(args, "-c", "--config") ?: DEFAULT_CONFIG_PATH
+
+    /**
+     * Returns the value passed with [short] or [long] (`-t feat`, `--type feat` or `--type=feat`), or null if absent.
+     * A flag given as the last argument, with no value after it, counts as absent.
+     */
+    protected fun extractOption(
+        args: Array<String>,
+        short: String,
+        long: String,
+    ): String? {
+        args.firstOrNull { it.startsWith("$long=") }?.let { return it.removePrefix("$long=") }
+        val index = args.indexOfFirst { it == short || it == long }
+        return if (index >= 0) args.getOrNull(index + 1) else null
     }
 
     /**

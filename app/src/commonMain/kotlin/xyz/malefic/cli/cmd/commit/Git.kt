@@ -26,6 +26,9 @@ object Git {
         val staged: Boolean,
     ) {
         val display get() = "$status ${paths.joinToString(" <- ")}"
+
+        /** Whether the working tree differs from the index (including untracked files), i.e. `git add` has something to do. */
+        val hasUnstagedChanges get() = status[1] != ' '
     }
 
     fun getStagedFiles() = git("diff", "--cached", "--name-only").lines

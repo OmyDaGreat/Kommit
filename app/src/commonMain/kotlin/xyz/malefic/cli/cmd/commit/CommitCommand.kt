@@ -245,7 +245,9 @@ class CommitCommand : BaseCommand() {
                 return false
             }
 
-        val toStage = selected.map { files[it].paths.first() }
+        // Files that are already fully staged (e.g. a staged deletion) are skipped: their path may no longer exist
+        // anywhere git add looks, and an unmatched pathspec makes git abort the whole add.
+        val toStage = selected.map { files[it] }.filter { it.hasUnstagedChanges }.map { it.paths.first() }
         val toUnstage = files.flatMapIndexed { i, f -> if (i !in selected && f.staged) f.paths else emptyList() }
         val failure =
             listOfNotNull(

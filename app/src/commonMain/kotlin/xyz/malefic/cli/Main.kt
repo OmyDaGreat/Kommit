@@ -12,19 +12,21 @@ import xyz.malefic.cli.cmd.gpg.GpgCommand
  * The entry point of the application.
  *
  * This function processes the command-line arguments and invokes the appropriate command handler.
- * If no arguments are provided, it defaults to the 'commit' subcommand.
+ * If no subcommand is given (no arguments, or only options like `-t feat`), it defaults to the 'commit' subcommand.
  *
  * @param args The command-line arguments passed to the application.
  */
 fun main(args: Array<String>) {
-    val name = args.getOrNull(0) ?: "commit"
+    val first = args.getOrNull(0)
 
-    if (name in listOf("version", "--version", "-v")) {
+    if (first in listOf("version", "--version", "-v")) {
         println("kommit $VERSION")
         return
     }
 
-    val commandArgs = if (args.isNotEmpty()) args.drop(1).toTypedArray() else emptyArray()
+    val impliedCommit = first == null || (first.startsWith("-") && first !in listOf("-h", "--help"))
+    val name = if (impliedCommit) "commit" else first
+    val commandArgs = if (impliedCommit) args else args.drop(1).toTypedArray()
 
     val command =
         when (name) {

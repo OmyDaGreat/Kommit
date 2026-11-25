@@ -17,15 +17,21 @@ import xyz.malefic.cli.cmd.commit.Git.stageAll
 import xyz.malefic.cli.cmd.commit.Git.unstage
 import xyz.malefic.cli.cmd.commit.Parsing.KommitConfig
 import xyz.malefic.cli.cmd.commit.Parsing.StageMode
+import xyz.malefic.cli.cmd.util.SelectOption
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
 import xyz.malefic.cli.cmd.util.readMultiSelect
 import xyz.malefic.cli.cmd.util.readMultilineInput
+import xyz.malefic.cli.cmd.util.readSelect
 
 class CommitCommand : BaseCommand() {
     override fun Session.run(args: Array<String>) {
-        generateCommit(extractConfigPath(args))
+        generateCommit(
+            extractConfigPath(args),
+            typeArg = extractOption(args, "-t", "--type"),
+            scopeArg = extractOption(args, "-s", "--scope"),
+        )
     }
 
     override fun MainRenderScope.showHelp() {
@@ -35,12 +41,18 @@ class CommitCommand : BaseCommand() {
         textLine()
         textLine("Options:")
         textLine("  -c, --config PATH   Path to the configuration file (default: .kommit.yaml)")
+        textLine("  -t, --type TYPE     Commit type, skipping the type picker")
+        textLine("  -s, --scope SCOPE   Commit scope, skipping the scope picker (\"\" for no scope)")
         textLine("  -h, --help          Show this help message")
         textLine()
         textLine("If no configuration exists, run 'kommit create' to set up a .kommit.yaml")
     }
 
-    private fun Session.generateCommit(configPath: String) {
+    private fun Session.generateCommit(
+        configPath: String,
+        typeArg: String?,
+        scopeArg: String?,
+    ) {
         var error by liveVarOf(false)
 
         section {
@@ -65,11 +77,53 @@ class CommitCommand : BaseCommand() {
         if (error) return
 
         val options = config.options
+        val typeNames = config.types.map { it.type }
+        fun scopesFor(type: String) = (config.scopes["all"].orEmpty() + config.scopes[type].orEmpty()).distinct()
+
+        fun scopeError(
+            type: String,
+            scope: String,
+        ): String? {
+            val available = scopesFor(type)
+            val valid =
+                scope in available ||
+                    (options.allowCustomScopes && scope.isNotBlank()) ||
+                    (options.allowEmptyScopes && scope.isBlank())
+            if (valid) return null
+            val allowed = available + if (options.allowEmptyScopes) listOf("\"\" (none)") else emptyList()
+            return "Invalid scope '$scope' for type '$type'. Available: ${allowed.joinToString(", ").ifEmpty { "none" }}"
+        }
+
+        // Check flags before staging anything, so a typo doesn't leave the index changed.
+        val flagError =
+            when {
+                typeArg != null && typeArg !in typeNames -> {
+                    "Unknown type '$typeArg'. Available: ${typeNames.joinToString(", ")}"
+                }
+
+                typeArg != null && scopeArg != null -> {
+                    scopeError(typeArg, scopeArg.trim())
+                }
+
+                else -> {
+                    null
+                }
+            }
+        if (flagError != null) {
+            section { red { textLine(flagError) } }.run()
+            return
+        }
+
         if (!checkStaging(options.stageMode)) return
 
-        val selectedType = readInputOptions("\nSelect the type of change: ", *config.types.map { it.type }.toTypedArray())
+        val selectedType =
+            typeArg?.also { section { textLine("\nType: $it") }.run() }
+                ?: readSelect(
+                    "\nSelect the type of change:",
+                    config.types.map { SelectOption(it.type, description = it.description) },
+                )
 
-        val availableScopes = (config.scopes["all"].orEmpty() + config.scopes[selectedType].orEmpty()).distinct()
+        val availableScopes = scopesFor(selectedType)
         if (availableScopes.isEmpty() && !options.allowCustomScopes && !options.allowEmptyScopes) {
             section {
                 red { textLine("No scopes available for the selected type, and custom/empty scopes are disabled. Please fix the config.") }
@@ -77,32 +131,22 @@ class CommitCommand : BaseCommand() {
             return
         }
         val scope =
-            if (availableScopes.isNotEmpty() && !(options.allowCustomScopes || options.allowEmptyScopes)) {
-                readInputOptions(
-                    "\nSelect a scope: ",
-                    *availableScopes.toTypedArray(),
-                )
-            } else if (availableScopes.isNotEmpty()) {
-                val scopeOptionString = "${
-                    if (options.allowCustomScopes) " (or enter a custom one)" else ""
-                } ${
-                    if (options.allowEmptyScopes) " (or leave blank to skip)" else ""
-                }"
-                readInputRetry(
-                    "\nSelect a scope$scopeOptionString: ",
-                    {
-                        it in availableScopes || (options.allowCustomScopes && it.isNotBlank()) ||
-                            (options.allowEmptyScopes && it.isBlank())
-                    },
-                    "Invalid scope. Please choose from the available scopes$scopeOptionString.",
-                    *availableScopes.toTypedArray(),
-                )
+            if (scopeArg != null) {
+                val trimmed = scopeArg.trim()
+                scopeError(selectedType, trimmed)?.let { message ->
+                    section { red { textLine(message) } }.run()
+                    return
+                }
+                section { textLine("\nScope: ${trimmed.ifEmpty { "(none)" }}") }.run()
+                trimmed
+            } else if (availableScopes.isEmpty() && !options.allowCustomScopes) {
+                "" // Only an empty scope is allowed, so there's nothing to ask.
             } else {
-                readInputRetry(
-                    "\nEnter a scope${if (options.allowEmptyScopes) " (or leave blank to skip)" else ""}:",
-                    { it.isNotBlank() || (options.allowEmptyScopes && it.isBlank()) },
-                    "Invalid scope. Please enter a valid scope.",
-                ).trim()
+                val scopeOptions =
+                    availableScopes.map { SelectOption(it) } +
+                        if (options.allowEmptyScopes) listOf(SelectOption("", "(none)", "no scope")) else emptyList()
+                val hint = if (options.allowCustomScopes) " (type a new one to use a custom scope)" else ""
+                readSelect("\nSelect a scope$hint:", scopeOptions, allowCustom = options.allowCustomScopes).trim()
             }
 
         val description =

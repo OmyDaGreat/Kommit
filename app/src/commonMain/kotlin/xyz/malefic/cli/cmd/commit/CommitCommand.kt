@@ -17,11 +17,12 @@ import xyz.malefic.cli.cmd.commit.Git.stageAll
 import xyz.malefic.cli.cmd.commit.Git.unstage
 import xyz.malefic.cli.cmd.commit.Parsing.KommitConfig
 import xyz.malefic.cli.cmd.commit.Parsing.StageMode
+import xyz.malefic.cli.cmd.util.Check
 import xyz.malefic.cli.cmd.util.SelectOption
 import xyz.malefic.cli.cmd.util.readInput
 import xyz.malefic.cli.cmd.util.readInputOptions
 import xyz.malefic.cli.cmd.util.readInputRetry
-import xyz.malefic.cli.cmd.util.readMultiSelect
+import xyz.malefic.cli.cmd.util.readChecklist
 import xyz.malefic.cli.cmd.util.readMultilineInput
 import xyz.malefic.cli.cmd.util.readSelect
 
@@ -270,6 +271,7 @@ class CommitCommand : BaseCommand() {
 
     /**
      * Let the user pick which changed files to commit, then stage the picked ones and unstage the rest.
+     * Partially staged files can also be kept as they are, so only their staged changes are committed.
      * Returns false if nothing was selected or git failed.
      */
     private fun Session.reviewStaging(): Boolean {
@@ -278,21 +280,28 @@ class CommitCommand : BaseCommand() {
                 section { red { textLine("No changes to commit.") } }.run()
                 return false
             }
-        val initiallySelected =
-            files.indices
-                .filter { files[it].staged }
-                .toSet()
-                .ifEmpty { files.indices.toSet() }
-        val selected =
-            readMultiSelect("\nSelect the files to stage and commit:", files.map { it.display }, initiallySelected).ifEmpty {
-                section { yellow { textLine("No files selected.") } }.run()
-                return false
+        val anyStaged = files.any { it.staged }
+        val initial =
+            files.map {
+                when {
+                    it.partiallyStaged -> Check.PARTIAL
+                    it.staged || !anyStaged -> Check.ON
+                    else -> Check.OFF
+                }
             }
+        val legend =
+            "[x] stage whole file  [~] keep staged part only  [ ] leave out".takeIf { Check.PARTIAL in initial }
+        val states = readChecklist("\nSelect the files to stage and commit:", files.map { it.display }, initial, legend)
+        if (states.all { it == Check.OFF }) {
+            section { yellow { textLine("No files selected.") } }.run()
+            return false
+        }
 
-        // Files that are already fully staged (e.g. a staged deletion) are skipped: their path may no longer exist
-        // anywhere git add looks, and an unmatched pathspec makes git abort the whole add.
-        val toStage = selected.map { files[it] }.filter { it.hasUnstagedChanges }.map { it.paths.first() }
-        val toUnstage = files.flatMapIndexed { i, f -> if (i !in selected && f.staged) f.paths else emptyList() }
+        // [~] files are left exactly as they are. [x] files are only added if they have unstaged changes: an already
+        // fully staged file (e.g. a staged deletion) may not exist anywhere git add looks, and an unmatched pathspec
+        // makes git abort the whole add.
+        val toStage = files.filterIndexed { i, f -> states[i] == Check.ON && f.hasUnstagedChanges }.map { it.paths.first() }
+        val toUnstage = files.filterIndexed { i, f -> states[i] == Check.OFF && f.staged }.flatMap { it.paths }
         val failure =
             listOfNotNull(
                 if (toStage.isNotEmpty()) stage(toStage) else null,

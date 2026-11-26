@@ -165,7 +165,7 @@ options:
 |The prefix used for issue references in the footer. By default, issue references are prefixed with 'ISSUES CLOSED:' in the commit footer.
 
 |`options.stageMode`
-|How Kommit stages changes before committing (none/review/auto). `none`: Kommit only commits what is already staged and stops with a reminder if nothing is. `review`: right before committing, Kommit lists every changed file (staged, unstaged and untracked) and lets you pick which ones to stage and commit; unselected files are unstaged. `auto`: if nothing is staged, Kommit stages all changes automatically. Defaults to `none`.
+|How Kommit stages changes before committing (none/review/auto). `none`: Kommit only commits what is already staged and stops with a reminder if nothing is. `review`: right before committing, Kommit lists every changed file (staged, unstaged and untracked) and lets you pick which ones to stage and commit; unselected files are unstaged. Partially staged files (e.g. after `git add -p`) are marked `[~]` and kept as they are by default, so only their staged changes are committed; press space to cycle to staging the whole file `[x]` or leaving it out `[ ]`. `auto`: if nothing is staged, Kommit stages all changes in the repository automatically. Defaults to `none`.
 |===
 
 == Example Commit Messages

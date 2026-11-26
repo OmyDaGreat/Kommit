@@ -123,15 +123,49 @@ fun Session.readMultiSelect(
     prompt: String,
     options: List<String>,
     initiallySelected: Set<Int> = options.indices.toSet(),
-): Set<Int> {
-    var selected by liveVarOf(initiallySelected)
+): Set<Int> =
+    readChecklist(prompt, options, options.indices.map { if (it in initiallySelected) Check.ON else Check.OFF })
+        .withIndex()
+        .filter { it.value != Check.OFF }
+        .map { it.index }
+        .toSet()
+
+/** The state of one row in [readChecklist]. */
+enum class Check(
+    val box: String,
+) {
+    ON("[x]"),
+    PARTIAL("[~]"),
+    OFF("[ ]"),
+}
+
+/**
+ * Show a checklist of [options] starting in the [initial] states, and return the states the user left them in.
+ * Rows that start as [Check.PARTIAL] cycle partial -> on -> off with space; all other rows toggle on/off.
+ * 'a' turns every row off if none are off, otherwise turns the off rows back on (partial for rows that started partial).
+ * [legend] explains the states and is shown under the controls hint.
+ */
+fun Session.readChecklist(
+    prompt: String,
+    options: List<String>,
+    initial: List<Check>,
+    legend: String? = null,
+): List<Check> {
+    require(initial.size == options.size) { "initial must have one state per option" }
+    val canBePartial = initial.map { it == Check.PARTIAL }
+    fun onState(i: Int) = if (canBePartial[i]) Check.PARTIAL else Check.ON
+
+    var states by liveVarOf(initial)
     var highlighted by liveVarOf(0)
     var confirmed by liveVarOf(false)
     section {
         textLine(prompt)
-        if (!confirmed) textLine("(up/down to move, space to toggle, a to toggle all, enter to confirm)")
+        if (!confirmed) {
+            textLine("(up/down to move, space to toggle, a to toggle all, enter to confirm)")
+            legend?.let { black(isBright = true) { textLine(it) } }
+        }
         options.forEachIndexed { i, option ->
-            val line = "${if (i in selected) "[x]" else "[ ]"} $option"
+            val line = "${states[i].box} $option"
             if (i == highlighted && !confirmed) cyan { textLine("> $line") } else textLine("  $line")
         }
     }.runUntilSignal {
@@ -146,11 +180,23 @@ fun Session.readMultiSelect(
                 }
 
                 Keys.Space -> {
-                    selected = if (highlighted in selected) selected - highlighted else selected + highlighted
+                    val i = highlighted
+                    val next =
+                        when (states[i]) {
+                            Check.PARTIAL -> Check.ON
+                            Check.ON -> Check.OFF
+                            Check.OFF -> onState(i)
+                        }
+                    states = states.toMutableList().also { it[i] = next }
                 }
 
                 Keys.A -> {
-                    selected = if (selected.size == options.size) emptySet() else options.indices.toSet()
+                    states =
+                        if (Check.OFF !in states) {
+                            states.map { Check.OFF }
+                        } else {
+                            states.mapIndexed { i, state -> if (state == Check.OFF) onState(i) else state }
+                        }
                 }
 
                 Keys.Enter -> {
@@ -160,7 +206,7 @@ fun Session.readMultiSelect(
             }
         }
     }
-    return selected
+    return states
 }
 
 /**

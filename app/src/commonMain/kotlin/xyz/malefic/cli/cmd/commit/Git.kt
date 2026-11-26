@@ -25,15 +25,22 @@ object Git {
         val paths: List<String>,
         val staged: Boolean,
     ) {
-        val display get() = "$status ${paths.joinToString(" <- ")}"
+        val display get() = "$status ${paths.joinToString(" <- ")}${if (partiallyStaged) "  (partially staged)" else ""}"
 
         /** Whether the working tree differs from the index (including untracked files), i.e. `git add` has something to do. */
         val hasUnstagedChanges get() = status[1] != ' '
+
+        /**
+         * Whether some changes are staged and others aren't, e.g. after `git add -p`.
+         * Merge conflicts (a `U` in either column, or both sides added/deleted) are excluded: they aren't a deliberate split.
+         */
+        val partiallyStaged get() = staged && hasUnstagedChanges && 'U' !in status && status != "AA" && status != "DD"
     }
 
     fun getStagedFiles() = git("diff", "--cached", "--name-only").lines
 
-    fun stageAll() = git("add", ".")
+    /** Stage every change in the repository, whichever directory Kommit was run from. */
+    fun stageAll() = git("add", "-A")
 
     fun stage(paths: List<String>) = git("add", "-A", "--pathspec-from-file=-", input = paths.joinToString("\n"))
 
